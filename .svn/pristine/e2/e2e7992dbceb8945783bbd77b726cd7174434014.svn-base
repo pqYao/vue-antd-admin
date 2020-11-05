@@ -1,0 +1,167 @@
+<template>
+  <div class="contact-select-wrapper">
+    <SearchForm
+      :searchList="searchList"
+      name="查询条件"
+      @on-filter="toSearch">
+    </SearchForm>
+    <a-card>
+      <Heading name="查询结果"> </Heading>
+      <a-table
+        size="small"
+        rowKey="vendorUserId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :customRow="rowClick"
+        :scroll="{ x: true }"
+        :rowSelection="{
+          fixed: true,
+          type: 'radio',
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange
+        }">
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange">
+      </pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+  import SearchForm from "@/components/form/SearchForm";
+  import Heading from "@/components/heading/Heading";
+  import Pagination from "@/components/pagination/Pagination";
+  import { vendorUserInfoByPage } from "@/services/userinfo";
+  export default {
+    name: "contact-select",
+    components: { Heading, SearchForm, Pagination },
+    props: {
+      param: {
+        type: Object,
+        default() {
+          return {}
+        }
+      }
+    },
+    data() {
+      return {
+        filter: {},
+        selectedRowKeys: [],
+        selectedRows: [],
+        dataSource: [],
+        pageData: {
+          limit: 10,
+          total: 0,
+          page: 1,
+          loading: false
+        },
+        searchList: [
+          {
+            type: "input",
+            label: "联系人",
+            key: "userName"
+          },
+          {
+            type: "input",
+            label: "电话",
+            key: "userPhone"
+          }
+        ],
+        columns: [
+          {
+            title: "序号",
+            dataIndex: "number",
+            align: "center",
+            customRender: (text, record, index) =>
+              `${(this.pageData.page - 1) * this.pageData.limit + index + 1}`,
+            width: 80
+          },
+          {
+            title: "联系人",
+            dataIndex: "userName",
+            align: "center"
+          },
+          {
+            title: "电话",
+            dataIndex: "userPhone",
+            align: "center"
+          }
+        ]
+      };
+    },
+    created() {
+      this.getData();
+    },
+    activated() {
+      this.getData();
+    },
+    methods: {
+      getData() {
+        let param = Object.assign(
+          {
+            limit: this.pageData.limit,
+            page: this.pageData.page
+          },
+          this.param,
+          this.filter
+        );
+        param.vendorId = '2';
+        this.pageData.loading = true;
+        vendorUserInfoByPage(param).then(res => {
+          const resData = res.data || {};
+          if (resData.errCode == "0000") {
+            this.dataSource = resData.responseResult.data || [];
+            this.pageData.total = Number(resData.responseResult.total);
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+          this.pageData.loading = false;
+        });
+      },
+      toSearch(data) {
+        this.filter = data;
+        this.getData();
+      },
+      onSelectChange(data, row) {
+        this.selectedRowKeys = data;
+        this.selectedRows = row;
+      },
+      sizeChange(page, pageSize) {
+        this.pageData.page = page;
+        this.pageData.limit = pageSize;
+        this.getData();
+      },
+      pageChange(current, size) {
+        this.pageData.page = current;
+        this.pageData.limit = size;
+        this.getData();
+      },
+      getRes() {
+        return this.selectedRows[0];
+      },
+      //行点击
+      rowClick(data) {
+        return {
+          on: {
+            click: () => {
+              let keys = data.vendorId;
+              this.selectedRowKeys = [keys];
+              this.selectedRows = [data];
+            }
+          }
+        };
+      }
+    }
+  };
+</script>

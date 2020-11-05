@@ -1,0 +1,472 @@
+<template>
+  <a-card>
+    <Heading name="基本信息">
+      <a-button type="primary" @click="handleSubmit">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+
+    <a-form
+      layout="horizontal"
+      :form="form"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="采购项目编号"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-input
+              disabled
+              v-decorator="[
+                `projectCode`,
+                {
+                  initialValue: formData.projectCode
+                }
+              ]"
+              placeholder="保存后自动生成"
+              allowClear
+            >
+            </a-input>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="项目所属年份"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `projectYear`,
+                {
+                  initialValue: formData.projectYear,
+                  rules: [{ required: true, message: '请选择项目所属年份' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option value="1">{{
+                new Date().getFullYear() - 1
+              }}</a-select-option>
+              <a-select-option value="2">
+                {{ new Date().getFullYear() }}
+              </a-select-option>
+              <a-select-option value="3">
+                {{ new Date().getFullYear() + 1 }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="采购方式"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `purchaseType`,
+                {
+                  initialValue: formData.purchaseType,
+                  rules: [{ required: true, message: '请选择采购方式' }]
+                }
+              ]"
+              @change="purchaseTypeChange"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option
+                v-for="(m, i) in dictionary.purchaseType"
+                :class="{ 'hide-select-item': !m }"
+                :key="i"
+                :value="`${i}`"
+                >{{ m }}</a-select-option
+              >
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="16" :sm="24">
+          <a-form-item
+            label="采购项目名称"
+            :labelCol="{ span: 4 }"
+            :wrapperCol="{ span: 19 }"
+          >
+            <a-input
+              v-decorator="[
+                `projectName`,
+                {
+                  maxLength: 50,
+                  initialValue: formData.projectName,
+                  validateTrigger: ['change', 'blur'],
+                  rules: [{ required: true, validator: checkProjectName }],
+                  getValueFromEvent: event => {
+                    return event.target.value.replace(/[`\\|,|'`]/g, '');
+                  }
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="标包划分"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `purchaseFlag`,
+                {
+                  initialValue: formData.purchaseFlag,
+                  rules: [{ required: true, message: '请选择标包划分' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option value="1">是</a-select-option>
+              <a-select-option value="0">否</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="需求单位/部门"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-input-search
+              @click="onSearch('requirementName')"
+              @search="onSearch('requirementName')"
+              v-decorator="[
+                'requirementName',
+                {
+                  initialValue: formData.requirementName,
+                  rules: [{ required: true, message: '请选择需求汇总单号' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="开支类型"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `expenditureType`,
+                {
+                  initialValue: formData.expenditureType,
+                  rules: [{ required: true, message: '请选择开支类型' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option
+                v-for="(m, i) in dictionary.expenditureType"
+                :class="{ 'hide-select-item': !m }"
+                :key="i"
+                :value="`${i}`"
+                >{{ m }}</a-select-option
+              >
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="估算金额(不含税/元)"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-input
+              v-decorator="[
+                `predictTaxFree`,
+                {
+                  initialValue: formData.predictTaxFree,
+                  validateTrigger: ['change', 'blur'],
+                  rules: [{ required: true, validator: checkProjectName }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="估算金额(含税/元)"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-input
+              v-decorator="[
+                `predictTax`,
+                {
+                  initialValue: formData.predictTax,
+                  validateTrigger: ['change', 'blur'],
+                  rules: [{ required: true, validator: checkProjectName }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24" v-if="formData.purchaseType === '2'">
+          <a-form-item
+            label="是否资格预审"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `prequalficationFlag`,
+                {
+                  initialValue: formData.prequalficationFlag,
+                  rules: [{ required: true, message: '请选择是否资格预审' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option value="1">是</a-select-option>
+              <a-select-option value="0">否</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="是否委托"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `entrustFlag`,
+                {
+                  initialValue: formData.entrustFlag,
+                  rules: [
+                    {
+                      required: formData.purchaseType === '1',
+                      message: '请选择是否委托'
+                    }
+                  ]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option value="1">是</a-select-option>
+              <a-select-option value="0">否</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="代理机构名称"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `agencyOrgName`,
+                {
+                  initialValue: formData.agencyOrgName,
+                  validateTrigger: ['change', 'blur'],
+                  rules: [{ required: true, validator: checkProjectName }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            ></a-select>
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24">
+          <a-form-item
+            label="代理机构项目经理"
+            :labelCol="{ span: 8 }"
+            :wrapperCol="{ span: 14 }"
+          >
+            <a-select
+              v-decorator="[
+                `agencyOrgManegerName`,
+                {
+                  initialValue: formData.agencyOrgManegerName
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            ></a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row class="bid-search-grid">
+        <a-col :md="24" :sm="24">
+          <a-form-item
+            label="采购回避事项说明"
+            :labelCol="{ span: 3 }"
+            :wrapperCol="{ span: 21 }"
+          >
+            <a-radio-group
+              v-decorator="[
+                'projectAvoid',
+                {
+                  initialValue: formData.projectAvoid
+                }
+              ]"
+            >
+              <a-radio :style="radioStyle" value="1"
+                >本人及特定关系人（特定关系人指近亲以及其他共同利益关系人，下同）与该项目供应商存在利益关系</a-radio
+              >
+              <a-radio :style="radioStyle" value="2"
+                >本人及特定关系人存在被他人要求对该采购项目或某供应商进行特别安排、照顾等请托事项</a-radio
+              >
+              <a-radio :style="radioStyle" value="3"
+                >本人及特定关系人存在其他可能产生利益冲突的事项</a-radio
+              >
+              <a-radio :style="radioStyle" value="4">无上述情况</a-radio>
+            </a-radio-group>
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+    <a-modal
+      title="选择需求单位/部门"
+      width="80%"
+      v-model="requirementNameVisible"
+      @ok="handleOk"
+    >
+      <RequirementNameSelect
+        ref="RequirementNameSelect"
+      ></RequirementNameSelect>
+    </a-modal>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import RequirementNameSelect from "@/components/table/RequirementNameSelect";
+
+export default {
+  name: "edit",
+  components: { Heading, RequirementNameSelect },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      radioStyle: {
+        display: "block",
+        height: "30px",
+        lineHeight: "30px"
+      },
+      formData: {},
+      // 弹窗
+      requirementNameVisible: false
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  methods: {
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFields((error, values) => {
+        console.log("error", error);
+        console.log("Received values of form: ", values);
+      });
+    },
+    // 采购项目校验
+    checkProjectName(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入采购项目编码");
+        return;
+      }
+      if (value === "采购项目编码") {
+        callback("采购项目编码重复");
+        return;
+      }
+      callback();
+    },
+    // 采购方式选择改变
+    purchaseTypeChange(value) {
+      this.formData.purchaseType = value;
+      if (value === "1") {
+        this.formData.prequalficationFlag = "";
+      }
+    },
+    // 弹窗选择
+    onSearch(key) {
+      this[`${key}Visible`] = true;
+    },
+    handleOk() {}
+  }
+};
+</script>
+<style lang="less" scoped>
+.bid-search-form {
+  background: @form-background-color;
+}
+.ant-form-item {
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+/deep/.ant-form-explain {
+  position: absolute;
+  font-size: 12px;
+  z-index: 10;
+  margin-top: 5px;
+  padding: 6px 8px;
+  color: #fff;
+  text-align: left;
+  text-decoration: none;
+  word-wrap: break-word;
+  background-color: rgba(0, 0, 0, 0.75);
+  border-radius: 4px;
+  -webkit-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+/deep/.ant-form-explain::before,
+/deep/.ant-form-explain::after {
+  width: 0px;
+  height: 0px;
+  border-width: 8px;
+  border-style: solid;
+  border-color: transparent transparent rgba(0, 0, 0, 0.75) transparent;
+  position: absolute;
+  content: " ";
+  left: 20px;
+  top: -16px;
+}
+/deep/.ant-form-explain::before {
+  top: -17px;
+  border-color: transparent transparent transparent transparent;
+}
+.bid-search-form /deep/.ant-col-3 {
+  width: 11% !important;
+}
+.bid-search-form /deep/.ant-col-21 {
+  width: 86% !important;
+}
+</style>

@@ -1,0 +1,191 @@
+<template>
+  <div>
+    <!-- 查询条件 -->
+    <SearchForm
+      :searchList="searchList"
+      :len="2"
+      name="查询条件"
+      @on-filter="toSearch"
+    ></SearchForm>
+
+    <!-- 查询结果 -->
+    <a-card>
+      <Heading name="查询结果"> </Heading>
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          type: 'radio',
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange
+        }"
+        :customRow="rowClick"
+        :scroll="{ x: true }"
+        rowKey="userId"
+      >
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findUserInfoByPage } from "@/services/userinfo";
+
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 80
+  },
+  {
+    title: "招标代理机构项目经理姓名",
+    dataIndex: "realName",
+    align: "center"
+  },
+  {
+    title: "招标代理机构项目经理账号",
+    dataIndex: "account",
+    align: "center"
+  },
+  {
+    title: "联系电话",
+    dataIndex: "mobile",
+    align: "center"
+  },
+  {
+    title: "所属代理机构名称",
+    dataIndex: "vendorName",
+    align: "center"
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "代理机构项目经理姓名",
+    key: "realName"
+  }
+];
+
+export default {
+  name: "QueryList",
+  components: { Heading, SearchForm, Pagination },
+  props: {
+    vendorId: {
+      type: String,
+      default: ""
+    }
+  },
+  data() {
+    return {
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      filter: {},
+      pageData: pageData
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary", "user"])
+  },
+  created() {
+    this.pageData.limit = 15;
+    this.pageData.page = 1;
+    this.getData();
+  },
+  activated() {
+    this.getData();
+  },
+  methods: {
+    toSearch(data) {
+      this.filter = data;
+      this.getData();
+    },
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          vendorId: this.vendorId
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findUserInfoByPage(param).then(res => {
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    },
+    getRes() {
+      return this.selectedRows[0];
+    },
+    //行点击
+    rowClick(data) {
+      return {
+        on: {
+          click: () => {
+            let keys = data.userId;
+            this.selectedRowKeys = [keys];
+            this.selectedRows = [data];
+          }
+        }
+      };
+    }
+  }
+};
+</script>

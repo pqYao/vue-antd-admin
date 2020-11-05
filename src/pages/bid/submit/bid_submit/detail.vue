@@ -1,0 +1,41 @@
+<template>
+  <div class="bid-submit-detail-wrapper">
+    <project-info 
+      id="项目信息"
+      url="/bid/prepare/detail" 
+      purchaseTypeKey="purchaseTypeAll"
+      :projectData="projectData">
+    </project-info>
+    <purchase-files
+      id="采购文件"
+      :pageType=0
+      :operationState="operationState"
+      :payMode="payMode">
+    </purchase-files>
+    <bid-bond
+      id="投标保证金"
+      :pageType=0
+      :operationState="operationState"
+      :payMode="payMode">
+    </bid-bond>
+    <Anchor :anchorList="anchorList"></Anchor>
+  </div>
+</template>
+
+<script>
+import {mixins} from "./mixins.js";
+export default {
+  name: 'bid-submit-detail',
+  mixins: [mixins],
+  data() {
+    return {}
+  },
+  created() {
+    this.fnGetProjectData();
+  },
+  activated() {
+    this.fnGetProjectData();
+  },
+  methods: {},
+};
+</script>

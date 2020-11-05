@@ -1,0 +1,93 @@
+<template>
+  <a-descriptions bordered size="small" :column="{ md: 3, sm: 2, xs: 1 }">
+    <a-descriptions-item label="Product">
+      Cloud Database
+    </a-descriptions-item>
+    <a-descriptions-item label="Billing Mode">
+      Prepaid
+    </a-descriptions-item>
+    <a-descriptions-item label="Order time">
+      2018-04-24 18:00:00
+    </a-descriptions-item>
+    <a-descriptions-item
+      v-for="(item, i) in formList"
+      :key="i"
+      :label="item.label"
+      :span="item.span"
+      v-show="item.show"
+    >
+      <template v-if="item.flag">
+        {{ param[item.key] === "1" ? "是" : "否" }}
+      </template>
+      <template v-else-if="item.dic">
+        {{ dictionary[item.key][param[item.key]] }}
+      </template>
+       <template v-else-if="item.pt">
+        {{ dictionary[item.key][param['purchaseType']] }}
+      </template>
+      <template v-else-if="item.jump">
+        <a @click="fnJumpPage(item.key, jumpData)">{{ param[item.key] }}</a>
+      </template>
+      <template v-else>
+        {{ param[item.key] }}
+      </template>
+    </a-descriptions-item>
+  </a-descriptions>
+</template>
+<script>
+import { mapGetters } from "vuex";
+export default {
+  name: "descriptions",
+  props: {
+    list: {
+      type: Array,
+      required: true,
+      default: () => []
+    },
+    param: {
+      type: Object,
+      required: true,
+      default: () => {}
+    },
+    jumpData: {
+      type: Object,
+      required: false,
+      default: () => {}
+    }
+  },
+  watch: {
+    list: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    },
+    param: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    formList: function() {
+      return this.list.filter(item => item.show === true);
+    }
+  },
+  methods: {
+    fnJumpPage(key, data) {
+      this.$router.push({
+        path: data[key].url
+      });
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+/deep/.ant-descriptions-row:nth-of-type(1) {
+  visibility: collapse;
+}
+</style>

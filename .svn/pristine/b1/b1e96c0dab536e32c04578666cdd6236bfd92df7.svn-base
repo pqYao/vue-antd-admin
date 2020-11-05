@@ -1,0 +1,199 @@
+<template>
+  <a-row type="flex">
+    <a-col :flex="1">
+      <a-card>
+        <Heading name="组织机构"> </Heading>
+        <a-tree show-line :default-expanded-keys="['0-0-0']" @select="onSelect">
+          <a-icon slot="switcherIcon" type="down" />
+          <a-tree-node key="0-0" title="parent 1">
+            <a-tree-node key="0-0-0" title="parent 1-0">
+              <a-tree-node key="0-0-0-0" title="leaf" />
+              <a-tree-node key="0-0-0-1" title="leaf" />
+              <a-tree-node key="0-0-0-2" title="leaf" />
+            </a-tree-node>
+            <a-tree-node key="0-0-1" title="parent 1-1">
+              <a-tree-node key="0-0-1-0" title="leaf" />
+            </a-tree-node>
+            <a-tree-node key="0-0-2" title="parent 1-2">
+              <a-tree-node key="0-0-2-0" title="leaf" />
+              <a-tree-node key="0-0-2-1" title="leaf" />
+            </a-tree-node>
+          </a-tree-node>
+        </a-tree> </a-card
+    ></a-col>
+    <a-col :flex="4">
+      <div>
+        <!-- 查询条件 -->
+        <SearchForm
+          :searchList="searchList"
+          name="查询条件"
+          @on-filter="toSearch"
+        ></SearchForm>
+
+        <!-- 查询结果 -->
+        <a-card>
+          <!-- <Heading name="查询结果"> </Heading> -->
+          <a-table
+            size="small"
+            :loading="pageData.loading"
+            :pagination="false"
+            :columns="columns"
+            :dataSource="dataSource"
+            :rowSelection="{
+              fixed: true,
+              selectedRowKeys: selectedRowKeys,
+              onChange: onSelectChange
+            }"
+            :scroll="{ x: true }"
+            rowKey="projectId"
+          >
+            <a slot="projectCode" slot-scope="text">
+              {{ text }}
+            </a>
+          </a-table>
+          <pagination
+            :value="pageData.page"
+            :pageSize="pageData.limit"
+            v-show="pageData.total > 0"
+            :total="pageData.total"
+            @change="sizeChange"
+            @showSizeChange="pageChange"
+          ></pagination>
+        </a-card></div
+    ></a-col>
+  </a-row>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findProjectInfoByPage } from "@/services/bid";
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) => `${index + 1}`,
+    width: 100
+  },
+  {
+    title: "项目编码",
+    dataIndex: "projectCode",
+    scopedSlots: { customRender: "projectCode" }
+  },
+  {
+    title: "项目名称",
+    dataIndex: "projectName"
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "项目编码",
+    key: "projectCode"
+  },
+  {
+    type: "input",
+    label: "项目名称",
+    key: "projectName"
+  }
+];
+
+export default {
+  name: "QueryList",
+  components: { SearchForm, Pagination, Heading },
+  data() {
+    return {
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      filter: {},
+      pageData: {
+        limit: 10,
+        total: 0,
+        page: 1,
+        loading: false
+      }
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.toSearch();
+    },
+    onSelect(selectedKeys, info) {
+      console.log("selected", selectedKeys, info);
+    },
+    toSearch(data) {
+      this.filter = data;
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        },
+        this.filter
+      );
+
+      findProjectInfoByPage(param).then(res => {
+        this.pageData.loading = true;
+        const findRes = res.data;
+        if (findRes.code >= 0) {
+          const { data, total } = findRes.data;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$message.error(findRes.msg.message, 3);
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.$message.info("选中行改变了");
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    handleMenuClick(e) {
+      this.$message.info(e.key);
+    },
+    addNew() {
+      this.$router.push({
+        path: "/bid/prepare/add"
+      });
+    },
+    handleEdit() {},
+    handleDetail() {
+      // this.$router.push({
+      //   path: "/zbcg/zbzb/ck"
+      // });
+    },
+    handleDelete() {},
+    sizeChange(page, pageSize) {
+      console.log(page, pageSize);
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.toSearch();
+    },
+    pageChange(current, size) {
+      console.log(current, size);
+
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.toSearch();
+    }
+  }
+};
+</script>

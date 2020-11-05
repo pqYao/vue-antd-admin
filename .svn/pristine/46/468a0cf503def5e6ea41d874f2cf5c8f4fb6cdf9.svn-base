@@ -1,0 +1,147 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="详情信息"></Heading>
+      <Descriptions :list="baseList" :param="formData"></Descriptions>
+    </a-card>
+    <a-card>
+      <Heading name="项目情况说明" id="项目情况说明"></Heading>
+      <Descriptions :list="explainlist" :param="explainData"></Descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+import Heading from "@/components/heading/Heading";
+import Descriptions from "@/components/descriptions/Description";
+import { findProjectInfoById, findProjectExplain } from "@/services/other";
+
+export default {
+  components: { Heading, Descriptions },
+  data() {
+    return {
+      formData: {},
+      explainData: {},
+      baseList: [
+        {
+          label: "采购项目编号",
+          key: "projectCode",
+          show: true
+        },
+        { label: "项目所属年份", key: "projectYear", show: true },
+        { label: "采购方式", key: "otherPurchaseType", dic: true, show: true },
+        {
+          label: "采购项目名称",
+          key: "projectName",
+          span: "2",
+          show: true
+        },
+        { label: "单一来源场景", key: "singleSourceScene", show: false },
+        { label: "物资类型", key: "materialType", dic: true, show: true },
+        {
+          label: "需求单位/部门",
+          key: "requirementName",
+          show: true
+        },
+        { label: "开支类型", key: "expenditureType", dic: true, show: true },
+        {
+          label: "估算金额(不含税/元)",
+          key: "predictTaxFree",
+          show: true
+        },
+        { label: "估算金额(含税/元)", key: "predictTax", show: true },
+        {
+          label: "是否资格预审",
+          key: "prequalficationFlag",
+          flag: true,
+          show: false
+        },
+        { label: "是否委托", key: "entrustFlag", flag: true, show: true },
+        {
+          label: "代理机构名称",
+          key: "agencyOrgName",
+          show: false
+        },
+        {
+          label: "代理机构项目经理",
+          key: "agencyOrgManegerName",
+          show: false
+        },
+        {
+          label: "采购回避事项说明",
+          key: "projectAvoid",
+          dic: true,
+          span: "5",
+          show: true
+        },
+        { label: "创建部门", key: "createUnitName", show: true },
+        { label: "创建时间", key: "createDate", show: true },
+        { label: "项目经理", key: "createName", show: true }
+      ],
+      explainlist: [
+        { label: "邀请采购理由", key: "projectInvite", show: false, span: 3 },
+        {
+          label: "单一来源采购场景应用理由",
+          key: "singleSourceReason",
+          show: false,
+          span: 3
+        },
+        { label: "申报情况说明", key: "projectDeclare", show: true, span: 3 },
+        { label: "项目描述", key: "projectDescribe", show: true, span: 3 },
+        { label: "采购项目依据", key: "projectBasis", show: true, span: 3 }
+      ]
+    };
+  },
+  created() {
+    this.findProjectInfo();
+    this.findInfo();
+  },
+  methods: {
+    findProjectInfo() {
+      findProjectInfoById(this.$route.params.id).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult;
+          this.$emit("send-data", this.formData);
+          this.initList(this.formData);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    findInfo() {
+      findProjectExplain(this.$route.params.id).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.explainData = responseResult;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    initList(data) {
+      if (data.otherPurchaseType == "6" || data.otherPurchaseType == "8") {
+        this.explainlist[0].show = true;
+      }
+      if (data.otherPurchaseType == "5" || data.otherPurchaseType == "7") {
+        this.baseList[10].show = true;
+      }
+      if (data.otherPurchaseType === "9") {
+        this.baseList[4].show = true;
+        this.explainlist[1].show = true;
+      }
+      if (data.entrustFlag === "1") {
+        this.baseList[12].show = true;
+        this.baseList[13].show = true;
+      }
+    }
+  }
+};
+</script>

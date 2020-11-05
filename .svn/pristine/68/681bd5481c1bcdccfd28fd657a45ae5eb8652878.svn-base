@@ -1,0 +1,38 @@
+<template>
+  <div>
+    <span id="项目信息"> </span>
+    <Project></Project>
+    <span id="分包明细"> </span>
+    <SubContract></SubContract>
+    <span id="产品明细"> </span>
+    <Product></Product>
+    <AuditButton>
+      <a-button type="primary">
+        项目回退
+      </a-button>
+      <a-button type="primary">
+        分包完成
+      </a-button>
+      <a-button type="primary">
+        提交审批
+      </a-button>
+    </AuditButton>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import Project from "./components/Project";
+import Product from "./components/Product";
+import SubContract from "./components/SubContract";
+import Anchor from "@/components/anchor/Anchor";
+import AuditButton from "@/components/button/AuditButton";
+
+export default {
+  components: { Project, Anchor, Product, AuditButton, SubContract },
+  data() {
+    return {
+      anchorList: ["项目信息", "分包明细", "产品明细"],
+    };
+  },
+};
+</script>

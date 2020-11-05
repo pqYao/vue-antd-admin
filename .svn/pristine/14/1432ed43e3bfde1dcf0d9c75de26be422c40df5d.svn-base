@@ -1,0 +1,47 @@
+// @import '~ant-design-vue/lib/style/themes/default';
+
+// @table-header-bg: @primary-5;
+// @table-header-color: @gray-1;
+// @input-border-color: @primary-5;
+// @select-border-color:@primary-5;
+// @input-number-handler-border-color:@primary-5;
+// @descriptions-bg: @primary-1;
+// @trigger-background-color:@primary-5;
+// @admin-header-background-start: @base-bg-color;
+// @admin-header-background-end: @base-bg-color;
+
+// @menu-item-vertical-margin: 0px;
+// @menu-item-boundary-margin: 0px;
+// @layout-header-height: 50px;
+// @tabs-card-height: 32px;
+// @table-border-radius-base: 0;
+// @btn-border-radius-base: 25px;
+// @pagination-font-weight-active: bold;
+// @menu-item-height: 45px;
+// @menu-inline-toplevel-item-height: 50px;
+
+// // admin-header
+// @admin-header-background-start: #44A3F3;
+// @admin-header-background-end: #6152D1;
+// @admin-header-color:#fff;
+// @admin-header-shadow:rgba(215, 226, 241, 0.58);
+// @shadow:#E6EDF4;
+// @anticon:#3e98fd;
+
+// @title-bottom-border-color: #499AFF;
+// @form-background-color: #F3F8FF;
+// @menu-highlight-color: #007BFF;
+// @tabs-card-head-background: #F2F8FF;
+// @table-header-bg: #83B4F6;
+// @table-header-color: @gray-1;
+// @input-border-color: #ACC6ED;
+// @select-border-color: #ACC6ED;
+// @input-number-handler-border-color: #ACC6ED;
+// @descriptions-bg: #F3F8FF;
+// @table-header-bg-sm: #93c3ff;
+// @trigger-background-color: #4E86E7;
+// @footer-background-color: #6484D9;
+// @btn-primary-bg: #5497ff;
+
+
+

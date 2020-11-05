@@ -1,0 +1,394 @@
+<template>
+  <div class="divide-tender-info-wrapper">
+    <a-card>
+      <Heading name="分标明细">
+        <!-- 编辑页面才展示 -->
+        <div class="table-operations" v-if="pageType == 1">
+          <a-button type="primary" @click="fnHandleAdd">
+            <i :class="['iconfont', 'icon-xinzeng']"></i>
+            新增
+          </a-button>
+          <a-popconfirm title="确定快捷分标?" @confirm="fnFastSubtender">
+            <a-popover
+              placement="bottom"
+              content="将项目分成1个标，并自动关联项目下所有产品"
+            >
+              <a-button type="primary">
+                快捷分标
+              </a-button>
+            </a-popover>
+          </a-popconfirm>
+          <a-popconfirm
+            :disabled="deleteTitleType == 0"
+            :title="'确定批量删除?'"
+            @confirm="fnDeleteDivideTender(1)"
+          >
+            <a-button type="primary" @click="fnDeleteDivideTender(2)">
+              <i :class="['iconfont', 'icon-weibiaoti544']"></i>
+              批量删除
+            </a-button>
+          </a-popconfirm>
+          <a-button type="primary" @click="handleSubmit">
+            <i :class="['iconfont', 'icon-baocun']"></i>
+            保存
+          </a-button>
+        </div>
+      </Heading>
+      <a-form :form="form" @submit="handleSubmit">
+        <a-table
+          bordered
+          size="small"
+          class="es-table"
+          rowKey="subtenderId"
+          :loading="pageData.loading"
+          :pagination="false"
+          :columns="columns"
+          :dataSource="dataSource"
+          :scroll="{ x: true }"
+          :rowSelection="
+            pageType == 0
+              ? null
+              : {
+                  fixed: true,
+                  selectedRowKeys: selectedRowKeys,
+                  onChange: onSelectChange
+                }
+          "
+        >
+          <template slot="subtenderName" slot-scope="text, record, index">
+            <a-form-item v-if="pageType == 1">
+              <!-- :maxLength=10 -->
+              <a-input
+                allowClear
+                style="margin: -5px 0; width: 100%"
+                v-decorator="[
+                  `subtenderName${index}`,
+                  {
+                    rules: [{ required: true, validator: fnCheckName }],
+                    validateTrigger: ['blur'],
+                    // validateFirst: true,
+                    initialValue: text
+                  }
+                ]"
+                placeholder="请输入标名"
+                @focus="e => fnFocus(e, record)"
+                @change="
+                  e =>
+                    fnHandleChange(
+                      e.target.value,
+                      record.subtenderId,
+                      'subtenderName'
+                    )
+                "
+              />
+            </a-form-item>
+            <p v-else>{{ text }}</p>
+          </template>
+          <template
+            slot="action"
+            slot-scope="text, record"
+            v-if="pageType == 1"
+          >
+            <a-popconfirm
+              title="确定删除?"
+              @confirm="fnDeleteDivideTender(0, record.subtenderId)"
+            >
+              <a>删除</a>
+            </a-popconfirm>
+          </template>
+        </a-table>
+      </a-form>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import {
+  getDivideTenderDetail,
+  addSubTenderForFast,
+  addDivideTender,
+  updateDivideTender,
+  deleteDivideTender
+} from "@/services/bid";
+
+export default {
+  name: "divide-tender-info",
+  components: {
+    Heading: () => import("@/components/heading/Heading"),
+    pagination: () => import("@/components/pagination/Pagination")
+  },
+  props: {
+    //0: 详情; 1: 编辑
+    pageType: {
+      type: [Number, String],
+      default: 1
+    },
+    //项目信息
+    projectData: {
+      type: Object,
+      default() {
+        return {};
+      }
+    }
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      selectedRowKeys: [],
+      selectedRows: [],
+      pageData: {
+        limit: 15,
+        total: 0,
+        page: 1,
+        loading: false
+      },
+      curRecord: {},
+      dataSource: [],
+      columns: [],
+      columnsData: [
+        {
+          title: "序号",
+          dataIndex: "number",
+          align: "center",
+          customRender: (text, record, index) => `${index + 1}`,
+          width: 80
+        },
+        {
+          title: "标名",
+          dataIndex: "subtenderName",
+          // width: 180,
+          align: "center",
+          scopedSlots: { customRender: "subtenderName" }
+        },
+        {
+          title: "操作",
+          align: "center",
+          scopedSlots: { customRender: "action" },
+          width: 80
+        }
+      ]
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    fastTitleType() {
+      //0: 未选需要快速分标的数据 1: 已选
+      return this.selectedRowKeys.length == 0 ? 0 : 1;
+    },
+    deleteTitleType() {
+      //0: 未选需要快速分标的数据 1: 已选
+      return this.selectedRowKeys.length == 0 ? 0 : 1;
+    }
+  },
+  created() {
+    this.fnInit();
+  },
+  watch: {
+    projectData() {
+      this.fnInit();
+    }
+  },
+  methods: {
+    fnInit() {
+      //详情界面不展示操作列
+      this.columns = [];
+      let arr = [...this.columnsData],
+        index = this.columnsData.length - 1;
+      if (this.pageType == 0) {
+        arr.splice(index, 1);
+      }
+      this.columns = [...arr];
+      this.projectData.projectId && this.fnGetData();
+    },
+    fnGetData() {
+      //编辑界面不展示分页，详情界面才展示
+      let param = {
+        limit: this.pageType == 0 ? this.pageData.limit : 10000,
+        page: this.pageData.page,
+        projectId: this.projectData.projectId
+        // subtenderId: this.$route.params.id
+      };
+      getDivideTenderDetail(param).then(res => {
+        const resData = res.data || {};
+        const responseResult = resData.responseResult || {};
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+          this.$emit("emit-dt-length", this.dataSource.length);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    //快捷分标
+    fnFastSubtender() {
+      let data = Object.assign({}, this.projectData);
+      addSubTenderForFast(data).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.$emit("update-product-info");
+          //this.$message.success(resData.responseResult, 3);
+          this.fnGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    //新增标
+    fnHandleAdd() {
+      addDivideTender(this.projectData).then(res => {
+        const resData = res.data || {};
+        if (resData.errCode == "0000") {
+          this.$emit("update-product-info");
+          // this.$message.success(responseResult, 3);
+          this.fnGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    //单个(type: 0)/批量(type: 1)删除产品明细
+    fnDeleteDivideTender(type, id) {
+      if (type == 2 && this.deleteTitleType == 0) {
+        this.$message.warning("请至少选择一条数据进行删除！");
+        return false;
+      }
+      if (type == 2) return;
+      let ids = (type == 1) ? this.selectedRowKeys.join(",") : id;
+      deleteDivideTender(ids).then(res => {
+        const resData = res.data || {};
+        if (resData.errCode == "0000") {
+          this.$emit("update-product-info");
+          this.$message.success(resData.responseResult, 3);
+          this.fnClearCheckdData();
+          this.fnGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    //保存标
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(this.BASE.formScrollOptions, err => {
+        if (!err) {
+          let data = Object.assign({}, this.projectData);
+          data.cntractingList = this.dataSource;
+          updateDivideTender(this.dataSource).then(res => {
+            const resData = res.data || {};
+            if (resData.errCode == "0000") {
+              this.$emit("update-product-info");
+              this.$message.success(resData.responseResult, 3);
+              this.fnGetData();
+            } else {
+              this.$error({
+                title: "错误提示",
+                content: this.BASE.handleErrorMsg(resData)
+              });
+            }
+          });
+        }
+      });
+    },
+    fnFocus(e, record) {
+      this.curRecord = record;
+    },
+    //监听标名的输入
+    fnHandleChange(value, key, column) {
+      const newData = [...this.dataSource];
+      const target = newData.filter(item => key === item.subtenderId)[0];
+      if (target) {
+        target[column] = value;
+        this.dataSource = newData;
+      }
+    },
+    //校验标名
+    fnCheckName(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入标名");
+        return;
+      }
+      if (value.length > 10) {
+        callback("长度限制为10个字符");
+        return;
+      }
+      //判断是否与其他标名重复
+      let flag = false;
+      this.dataSource.every(ele => {
+        if (
+          !!this.curRecord.subtenderId &&
+          this.curRecord.subtenderId != ele.subtenderId &&
+          value == ele.subtenderName
+        ) {
+          flag = true;
+          return false;
+        }
+        return true;
+      });
+      if (value && flag) {
+        //判断结束之后，清空当前编辑列数据，否则保存时会出错
+        this.curRecord = {};
+        callback("与其它标名重复");
+        return;
+      }
+      //判断结束之后，清空当前编辑列数据，否则保存时会出错
+      this.curRecord = {};
+      callback();
+    },
+    //清空已选复选框
+    fnClearCheckdData() {
+      this.selectedRowKeys = [];
+      this.selectedRows = [];
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.fnGetData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.fnGetData();
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.table-operations {
+  text-align: right;
+  margin: 10px 5px;
+}
+.table-operations > button {
+  margin-right: 8px;
+}
+</style>

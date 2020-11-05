@@ -1,0 +1,54 @@
+<template>
+  <div>
+    <project-info
+      id="项目信息"
+      url="/bid/prepare/detail"
+      purchaseTypeKey="purchaseType"
+      :projectData="projectData"
+    >
+    </project-info>
+    <base-edit id="基本信息"> </base-edit>
+    <!-- 审批操作 -->
+    <audit-button>
+      <a-popover content="此功能暂不支持">
+        <a-button type="primary" disabled>项目回退</a-button>
+      </a-popover>
+      <!-- 单据没有审批流才展示 -->
+      <!-- <a-popconfirm
+        :visible="isVisiblePop"
+        title="确定编辑?"
+        @cancel="fnCancel"
+        @confirm="fnConfirm"
+        @visibleChange="handleVisibleChange">
+        <a-button 
+          type="primary"
+          @click="fnJudgeCanbeFinish">
+          分标完成
+        </a-button>
+      </a-popconfirm> -->
+      <!-- 单据有审批流才展示 -->
+      <!-- <a-button type="primary">提交审批</a-button> -->
+    </audit-button>
+  </div>
+</template>
+<script>
+export default {
+  name: "enturst-detail",
+  components: {
+    ProjectInfo: () => import("@/components/descriptions/ProjectInfo"),
+    BaseEdit: () => import("./components/BaseEdit")
+  },
+  data() {
+    return {
+      anchorList: ["项目信息", "基本信息"],
+      projectData: {}
+    };
+  },
+  created() {
+    // this.fnGetProjectData();
+  },
+  activated() {
+    // this.fnGetProjectData();
+  }
+};
+</script>

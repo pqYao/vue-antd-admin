@@ -1,0 +1,24 @@
+<template>
+    <a-descriptions bordered size='middle'>
+      <a-descriptions-item
+        v-for="(item, i) in list"
+        :key="i"
+        :label="item.label"
+        :span="item.span"
+      >
+        {{ item.content }}
+      </a-descriptions-item>
+    </a-descriptions>
+</template>
+<script>
+export default {
+  name:'descriptions',
+  props: {
+    list: {
+      type: Array,
+      required: true,
+      default: () => []
+    },
+  },
+};
+</script>

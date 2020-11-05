@@ -1,0 +1,419 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="维护项目文件">
+        <template>
+          <a-button type="primary" @click="handleUpdate('tenderFileName')"
+            >维护项目文件</a-button
+          >
+          <a-button type="primary" @click="handleUpdate('offerWay')"
+            >维护报价方式</a-button
+          >
+          <a-button type="primary" @click="handleUpdate('tenderMoney')"
+            >标书费用</a-button
+          >
+          <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+            <i :class="['iconfont', 'icon-baocun']"></i>
+            保存
+          </a-button>
+        </template>
+      </Heading>
+      <a-card>
+        <a-form
+          layout="horizontal"
+          :form="form"
+          class="es-form-small"
+          @keydown.native.enter.prevent="handleSearch"
+        >
+          <a-row>
+            <a-col :md="8" :sm="24">
+              <a-form-item label="标" v-bind="BASE.searchItemLayout">
+                <a-input placeholder="请输入" allowClear />
+              </a-form-item>
+            </a-col>
+            <a-col :md="8" :sm="24">
+              <a-form-item label="包" v-bind="BASE.searchItemLayout">
+                <a-input placeholder="请输入" allowClear />
+              </a-form-item>
+            </a-col>
+            <a-col :md="8" :sm="24">
+              <span style="float: right;margin-right: 30px;">
+                <a-button type="primary" @click="handleSearch">查询</a-button>
+                <a-popover content="重置查询条件" v-model="visible">
+                  <a-button @click="handleReset">重置</a-button>
+                </a-popover>
+              </span>
+            </a-col>
+          </a-row>
+        </a-form>
+      </a-card>
+      <a-form :form="form" @submit="handleSubmit">
+        <a-table
+          class="es-table"
+          size="small"
+          :bordered="true"
+          :loading="pageData.loading"
+          :pagination="false"
+          :columns="columns"
+          :dataSource="dataSource"
+          rowKey="tenderFileId"
+          :scroll="{ x: true }"
+          :rowSelection="
+            this.pageType == 0
+              ? null
+              : {
+                  fixed: true,
+                  selectedRowKeys: selectedRowKeys,
+                  onChange: onSelectChange
+                }
+          "
+        >
+          <!-- 标书费用 -->
+          <template slot="tenderMoney" slot-scope="text, record, index">
+            <a-form-item v-if="pageType == 1">
+              <a-input
+                allowClear
+                v-decorator="[
+                  `tenderMoney${index}`,
+                  {
+                    rules: [{ required: true, validator: validTenderMoney }],
+                    validateTrigger: ['blur'],
+                    initialValue: text
+                  }
+                ]"
+                @change="
+                  e =>
+                    onCellChange(
+                      e.target.value,
+                      record.tenderFileId,
+                      'tenderMoney'
+                    )
+                "
+                style="margin: -5px 0;width:100%"
+              />
+            </a-form-item>
+            <span v-else>{{ text }}</span>
+          </template>
+          <!-- 报价方式 -->
+          <template slot="offerWay" slot-scope="text, record, index">
+            <a-form-item v-if="pageType == 1">
+              <a-select
+                v-decorator="[
+                  `offerWay${index}`,
+                  {
+                    validateTrigger: ['blur'],
+                    rules: [{ required: true, message: '请选择报价方式' }],
+                    initialValue: text
+                  }
+                ]"
+                @change="e => onCellChange(e, record.tenderFileId, 'offerWay')"
+              >
+                <a-select-option
+                  v-for="(m, i) in dictionary.offerWay"
+                  :class="{ 'hide-select-item': !m }"
+                  :key="i"
+                  :value="`${i}`"
+                  >{{ m }}</a-select-option
+                >
+              </a-select>
+            </a-form-item>
+            <span v-else>{{ text }}</span>
+          </template>
+
+          <template slot="action" slot-scope="record">
+            <a-space :size="8">
+              <a>上传采购文件</a>
+              <a-popconfirm
+                title="是否删除此行采购文件?"
+                ok-text="确认"
+                cancel-text="取消"
+                @confirm="deleteById(record.tenderFileId)"
+              >
+                <a>删除采购文件</a>
+              </a-popconfirm>
+            </a-space>
+          </template>
+        </a-table>
+      </a-form>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+    <a-modal
+      title="批量维护项目文件"
+      width="80%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="tenderFileNameVisible"
+      v-model="tenderFileNameVisible"
+      @ok="handleOk('tenderFileName')"
+    >
+      <!-- <ProductSelect ref="product"></ProductSelect> -->
+    </a-modal>
+    <a-modal
+      title="批量维护报价方式"
+      width="40%"
+      height="200px"
+      :centered="true"
+      :maskClosable="false"
+      v-if="offerWayVisible"
+      v-model="offerWayVisible"
+      @ok="handleOk('offerWay')"
+    >
+      <a-select @change="offerWayChange" style="width: 100%">
+        <a-select-option
+          v-for="(m, i) in dictionary.offerWay"
+          :class="{ 'hide-select-item': !m }"
+          :key="i"
+          :value="`${i}`"
+          >{{ m }}</a-select-option
+        >
+      </a-select>
+    </a-modal>
+    <a-modal
+      title="批量维护标书费用"
+      width="40%"
+      height="200px"
+      :centered="true"
+      :maskClosable="false"
+      v-if="tenderMoneyVisible"
+      v-model="tenderMoneyVisible"
+      @ok="handleOk('tenderMoney')"
+    >
+      <a-input style="width: 100%" @change="tenderMoneyChange" />
+    </a-modal>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findSendTenderFileByPage, updateSendTenderFile } from "@/services/bid";
+
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    width: 80,
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`
+  },
+  {
+    title: "项目名称",
+    dataIndex: "projectName"
+  },
+  {
+    title: "项目编码",
+    dataIndex: "projectCode",
+    align: "center"
+  },
+  {
+    title: "标",
+    dataIndex: "subtenderName",
+    align: "center"
+  },
+  {
+    title: "包",
+    dataIndex: "subcontractingName",
+    align: "center"
+  },
+  {
+    title: "标书费用",
+    dataIndex: "tenderMoney",
+    scopedSlots: { customRender: "tenderMoney" },
+    align: "center"
+  },
+  {
+    title: "报价方式",
+    dataIndex: "offerWay",
+    scopedSlots: { customRender: "offerWay" },
+    align: "center",
+    width: 250
+  },
+  {
+    title: "采购文件",
+    dataIndex: "tenderFileName",
+    align: "center"
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    fixed: "right"
+  }
+];
+
+export default {
+  name: "tender-file",
+  components: { Heading, Pagination },
+  props: {
+    //0: 详情; 1: 编辑
+    pageType: {
+      type: [Number, String],
+      default: 1
+    }
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      columns: columns,
+      dataSource: [],
+      selectedRowKeys: [],
+      selectedRows: [],
+      pageData: pageData,
+      isConnect: false,
+      // 批量
+      tenderFileNameVisible: false,
+      offerWayVisible: false,
+      tenderMoneyVisible: false
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    tenderVindicateId() {
+      return this.$route.params.id;
+    }
+  },
+  created() {
+    this.handleGetData();
+  },
+  methods: {
+    // 数据改变
+    onCellChange(value, key, column) {
+      const newData = [...this.dataSource];
+      const target = newData.filter(item => key === item.tenderFileId)[0];
+      if (target) {
+        target[column] = value;
+        this.dataSource = newData;
+      }
+    },
+    handleGetData() {
+      //编辑界面不展示分页，详情界面才展示
+      let param = Object.assign(
+        {
+          limit: this.pageType == 0 ? this.pageData.limit : 10000,
+          page: this.pageData.page,
+          tenderVindicateId: this.tenderVindicateId
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      this.dataSource = [];
+      findSendTenderFileByPage(param).then(res => {
+        const resData = res.data || {};
+        const responseResult = resData.responseResult || {};
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    // 费用校验
+    validTenderMoney(rule, value, callback) {
+      let reg = this.BASE.reg.moneyReg;
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入标书费用");
+        return;
+      }
+      if (!reg.test(value)) {
+        callback("请输入正确的金额");
+        return;
+      }
+      callback();
+    },
+    // 保存
+    handleSubmit(e) {
+      e.preventDefault(e);
+      this.form.validateFieldsAndScroll(this.BASE.formScrollOptions, error => {
+        if (error) {
+          return;
+        }
+        this.isConnect = true;
+        this.updateInfo();
+      });
+    },
+    // 更新
+    updateInfo() {
+      updateSendTenderFile(this.dataSource).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          this.handleGetData();
+          this.$message.success(resData.responseResult, 3);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 批量维护
+    handleUpdate(type) {
+      if (
+        (type == "offerWay" || type == "tenderMoney") &&
+        this.selectedRowKeys.length == 0
+      ) {
+        this.$message.info("请先选择要设置操作的数据！");
+        return;
+      }
+      this[`${type}Visible`] = true;
+      this.offerWay = "";
+      this.tenderMoney = "";
+    },
+    offerWayChange(value) {
+      this.offerWay = value;
+    },
+    tenderMoneyChange(e) {
+      this.tenderMoney = e.target.value;
+    },
+    // 批量操作确定
+    handleOk(type) {
+      if (type == "offerWay" || type == "tenderMoney") {
+        this.dataSource.forEach(e => {
+          this.selectedRows.forEach(v => {
+            e.tenderFileId = v.tenderFileId;
+            e[type] = this[type];
+          });
+        });
+      }
+      this[`${type}Visible`] = false;
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.handleGetData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.handleGetData();
+    }
+  }
+};
+</script>

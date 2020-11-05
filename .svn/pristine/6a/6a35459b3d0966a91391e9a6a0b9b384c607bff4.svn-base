@@ -1,0 +1,320 @@
+<template>
+  <a-card>
+    <Heading name="招标时间设置">
+      <template v-slot:leftIcon>
+        <a-popover placement="bottom">
+          <template slot="content">
+            <p>
+              标书售卖开始时间、标书售卖截止时间、投标截止时间等时间是以满24小时为一天计算
+            </p>
+          </template>
+          <a-icon type="question-circle" />
+        </a-popover>
+      </template>
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+
+    <a-form
+      layout="horizontal"
+      :form="form"
+      class="es-form"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="标书售卖开始时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              :disabledDate="disabledDate"
+              @change="bidingDocSaleStartChange"
+              style="width:100%;"
+              v-decorator="[
+                'bidingDocSaleStart',
+                {
+                  rules: [
+                    { required: true, message: '请选择标书售卖开始时间' }
+                  ],
+                  initialValue: formData.bidingDocSaleStart
+                }
+              ]"
+              format="YYYY-MM-DD  HH:mm:ss"
+              showTime
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="标书售卖截止时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              @change="bidingDocSaleEndChange"
+              :disabledDate="disabledBidSaletimeEnd"
+              style="width:100%;"
+              v-decorator="[
+                'bidingDocSaleEnd',
+                {
+                  initialValue: formData.bidingDocSaleEnd,
+                  rules: [{ required: true, message: '请选择标书售卖截止时间' }]
+                }
+              ]"
+              format="YYYY-MM-DD  HH:mm:ss"
+              showTime
+            />
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24">
+          <a-form-item label="售卖天数" v-bind="BASE.oneItemLayout">
+            <a-input disabled v-model="formData.bidingDocSaleDays" />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="投标截止时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              style="width:100%;"
+              :disabledDate="disabledTenderOffTime"
+              @change="tenderOffTimeChange"
+              v-decorator="[
+                'tenderOffTime',
+                {
+                  initialValue: formData.tenderOffTime || '',
+                  rules: [{ required: true, message: '请选择投标截止时间' }]
+                }
+              ]"
+              showTime
+              format="YYYY-MM-DD  HH:mm:ss"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="开标地点" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-decorator="[
+                `tenderAddress`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.tenderAddress || '',
+                  rules: [{ required: true, message: '请输入开标地点' }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="投标天数" v-bind="BASE.oneItemLayout">
+            <a-input disabled v-model="formData.tenderDays" />
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import moment from "moment";
+import Heading from "@/components/heading/Heading";
+import {
+  findSendTenderTime,
+  updateSendTenderTime,
+  addSendTenderTime
+} from "@/services/bid";
+
+export default {
+  name: "tender-time-set",
+  components: {
+    Heading
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      tenderTimeId: "",
+      isConnect: false
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    tenderVindicateId() {
+      return this.$route.params.id;
+    },
+    projectId() {
+      return this.$route.query.projectId;
+    }
+  },
+  watch: {
+    formData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  created() {
+    this.handleInit();
+  },
+  methods: {
+    moment,
+    handleInit() {
+      this.handleGetData();
+    },
+    handleGetData() {
+      findSendTenderTime(this.tenderVindicateId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult || {};
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(
+        this.BASE.formScrollOptions,
+        (error, values) => {
+          if (error) {
+            return;
+          }
+          for (let i in values) {
+            if (
+              i != "bidingDocSaleEnd" &&
+              i != "bidingDocSaleStart" &&
+              i != "tenderOffTime"
+            ) {
+              this.formData[i] = values[i];
+            }
+          }
+          this.isConnect = true;
+          this.formData.tenderVindicateId = this.tenderVindicateId;
+          this.formData.projectId = this.projectId;
+          if (this.formData.tenderTimeId) {
+            this.handleUpdate();
+          } else {
+            this.handleAdd();
+          }
+        }
+      );
+    },
+    // 时间选择
+    tenderOffTimeChange(value, dateString) {
+      this.formData.tenderOffTime = dateString;
+      this.$set(this.formData, "tenderOffTime", dateString);
+      const diff = value.diff(
+        this.moment(this.formData.bidingDocSaleEnd),
+        "day"
+      );
+      this.formData.tenderDays = diff || "";
+    },
+    bidingDocSaleStartChange(value, dateString) {
+      this.formData.bidingDocSaleStart = dateString;
+      this.$set(this.formData, "bidingDocSaleStart", dateString);
+      const diff = this.moment(this.formData.bidingDocSaleEnd).diff(
+        value,
+        "day"
+      );
+      this.formData.bidingDocSaleDays = diff || "";
+    },
+    bidingDocSaleEndChange(value, dateString) {
+      this.formData.bidingDocSaleEnd = dateString;
+      this.$set(this.formData, "bidingDocSaleEnd", dateString);
+      const diff = value.diff(
+        this.moment(this.formData.bidingDocSaleStart),
+        "day"
+      );
+      this.formData.bidingDocSaleDays = diff || "";
+      const diff1 = this.moment(this.formData.tenderOffTime).diff(value, "day");
+      this.formData.tenderDays = diff1 || "";
+    },
+    // 截止时间选择范围
+    disabledBidSaletimeEnd(current) {
+      return (
+        current &&
+        current < moment(this.formData.bidingDocSaleStart).endOf("String")
+      );
+    },
+    // 投标截止时间选择范围
+    disabledTenderOffTime(current) {
+      return (
+        current &&
+        current < moment(this.formData.bidingDocSaleEnd).endOf("String")
+      );
+    },
+    // 新增
+    handleAdd() {
+      addSendTenderTime(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult || {};
+          this.$message.success("保存成功");
+          this.handleGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 更新
+    handleUpdate() {
+      updateSendTenderTime(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.handleGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 表单赋值
+    setVal(obj) {
+      for (let i in obj) {
+        this.formData[i] = obj[i];
+        let val = this.form.getFieldsValue();
+        for (let j in val) {
+          if (i == j) {
+            this.form.setFieldsValue({
+              [i]: obj[i]
+            });
+          }
+        }
+      }
+    },
+    // 自定义日期范围选择
+    disabledStartDate(startValue) {
+      const endValue = this.bidingDocSaleEnd;
+      if (!startValue || !endValue) {
+        return false;
+      }
+      return startValue.valueOf() > endValue.valueOf();
+    },
+    disabledEndDate(endValue) {
+      const startValue = this.bidingDocSaleStart;
+      if (!endValue || !startValue) {
+        return false;
+      }
+      return startValue.valueOf() >= endValue.valueOf();
+    },
+    disabledDate(current) {
+      return current && current < moment().endOf("String");
+    }
+  }
+};
+</script>

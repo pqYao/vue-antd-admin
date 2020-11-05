@@ -1,0 +1,75 @@
+<template>
+  <div class="package-info-wrapper">
+    <a-card>
+      <Heading name="标包信息"></Heading>
+      <Descriptions 
+        :list="labelList" 
+        :param="baseData" 
+        :jumpData="jumpData"> 
+      </Descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+export default {
+  name: "package-info",
+  props: {
+    baseData: {
+      type: Object,
+      default() {
+        return {}
+      }
+    }
+  },
+  components: {
+    Heading: () => import("@/components/heading/Heading"),
+    Descriptions: () => import("@/components/descriptions/Description")
+  },
+  data() {
+    return {
+      jumpData: {},
+      labelList: [
+        {
+          label: "项目编号",
+          key: "projectCode",
+          show: true,
+          jump: true
+        },
+        {
+          label: "项目名称",
+          key: "projectName",
+          show: true,
+        },
+        {
+          label: "标名",
+          key: "tenderName",
+          show: true
+        },
+        { 
+          label: "包名", 
+          key: "contractName", 
+          show: true 
+        }
+      ]
+    };
+  },
+  created() {
+    this.fnInit();
+  },
+  watch: {
+    baseData() {
+      this.fnInit();
+    },
+  },
+  methods: {
+    fnInit() {
+      console.log("this.baseData", this.baseData);
+      this.jumpData = {
+        projectCode: {
+          url: `/bid/prepare/detail/${this.baseData.projectId}`
+        }
+      }
+    }
+  }
+};
+</script>

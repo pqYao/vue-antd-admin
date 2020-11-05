@@ -1,0 +1,48 @@
+<template>
+  <div class="head">
+    <div class="head-icon">
+      <img src="../../assets/img/ic_tt.png" alt="" />
+    </div>
+    <div class="name">{{ name }}</div>
+    <div class="button-wrapper">
+      <slot></slot>
+    </div>
+  </div>
+</template>
+<script>
+export default {
+  name: "heading",
+  props: {
+    name: {
+      type: [String, Function],
+      default: ""
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.head {
+  height: 44px;
+  border-bottom: 2px solid @title-bottom-border-color;
+  display: flex;
+  align-items: center;
+  color: #000;
+}
+.name {
+  font-size: 14px;
+  font-weight: bold;
+  padding-left: 10px;
+}
+.button-wrapper {
+  margin-left: auto;
+}
+.ant-btn {
+  margin-left: 10px;
+}
+/deep/.iconfont {
+  color: #fff;
+  vertical-align: sub;
+  font-size: 21px;
+  margin-right: 1px;
+}
+</style>

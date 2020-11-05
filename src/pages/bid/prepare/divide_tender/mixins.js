@@ -1,0 +1,38 @@
+import Anchor from "@/components/anchor/Anchor";
+import { mapGetters } from "vuex";
+import { getProjectInfoData } from "@/services/bid";
+export const mixins = {
+components: {
+  ProjectInfo: () => import("@/components/descriptions/ProjectInfo"),
+  DivideTenderInfo: () => import("./components/DivideTenderInfo"),
+  ProductInfo: () => import('./components/ProductInfo'),
+  Anchor,
+},
+data() {
+	return {
+		projectData: {},
+		divideTenderDataLength: 0,
+		anchorList: ["项目信息", "分标明细", "产品明细"]
+	}
+},
+computed: {
+  ...mapGetters("account", ["dictionary"])
+},
+created() {
+  this.fnGetProjectData();
+},
+methods: {
+	fnGetProjectData() {
+    getProjectInfoData(this.$route.params.id).then(res => {
+			const resData = res.data;
+			if (resData.errCode == "0000") {
+				this.projectData = resData.responseResult;
+			} else {
+				this.$error({
+	        content: this.BASE.handleErrorMsg(resData)
+	      });
+			}
+    });
+  }
+}
+}

@@ -1,0 +1,134 @@
+<template>
+  <div class="divide-tender-edit-wrapper">
+    <project-info 
+      id="项目信息"
+      :projectData="projectData">
+    </project-info>
+    <divide-tender-info 
+      id="分标明细"
+      :pageType=1
+      :projectData="projectData"
+      @update-product-info="handleUpdateProductInfo"
+      @emit-dt-length="handleDivideTenderData">
+    </divide-tender-info>
+    <product-info 
+      id="产品明细"
+      :pageType=1
+      :projectData="projectData"
+      :divideTenderDataLength="divideTenderDataLength"
+      :isUpdateProjectInfo="isUpdateProjectInfo"
+      @finish-get-product-info="handleUpdateProductInfo">
+    </product-info>
+    <!-- 审批操作 -->
+    <audit-button>
+      <!-- 单据未分标完成则展示 -->
+      <a-popover content="此功能暂不支持">
+        <a-button type="primary" disabled>项目回退</a-button>
+      </a-popover>
+      <!-- 单据没有审批流才展示 -->
+      <a-popconfirm
+        :visible="isVisiblePop"
+        title="确定完成分标?"
+        @cancel="fnCancel"
+        @confirm="fnConfirm"
+        @visibleChange="handleVisibleChange">
+        <a-button 
+          type="primary"
+          @click="fnJudgeCanbeFinish">
+          分标完成
+        </a-button>
+      </a-popconfirm>
+      <!-- 单据有审批流才展示 -->
+      <!-- <a-button type="primary">提交审批</a-button> -->
+    </audit-button>
+    <Anchor :anchorList="anchorList"></Anchor>
+  </div>
+</template>
+
+<script>
+import {mixins} from "./mixins.js";
+import { 
+  fnFinishDivideTender,
+} from "@/services/bid";
+export default {
+  name: 'divide-tender-edit',
+  mixins: [mixins],
+  components: {
+    AuditButton: () => import("@/components/button/AuditButton")
+  },
+  data() {
+    return {
+      isVisiblePop: false,
+      isCanbeFinish: false,
+      isUpdateProjectInfo: false
+    }
+  },
+  created() {
+    this.fnGetProjectData();
+  },
+  activated() {
+    this.fnGetProjectData();
+  },
+  methods: {
+    handleDivideTenderData(args) {
+      this.divideTenderDataLength = args || 0;
+    },
+    fnCancel() {
+      this.isVisiblePop = false;
+    },
+    fnConfirm() {
+      let param = {
+        projectId: this.projectData.projectId,
+        checkFlag: false
+      }
+      //可以分标
+      fnFinishDivideTender(param).then((res) => {
+        const resData = res.data;
+        this.isVisiblePop = false;
+        if (resData.errCode == "0000") {
+          this.$message.success("分标完成。");
+          //分标完成后跳转到分标查询界面
+          this.$router.push({path: `/bid/prepare/divide-tender`});
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      })
+    },
+    handleVisibleChange(visible) {
+      if (!visible) {
+        this.isVisiblePop = false;
+        return;
+      }
+    },
+    fnJudgeCanbeFinish() {
+      let param = {
+        projectId: this.projectData.projectId,
+        checkFlag: true
+      }
+      fnFinishDivideTender(param).then((res) => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.isVisiblePop = true;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      })
+    },
+    handleUpdateProductInfo() {
+      this.isUpdateProjectInfo = !this.isUpdateProjectInfo;
+    }
+  },
+};
+</script>
+
+<style lang="less">
+  .bill-top-btn-wrapper {
+    text-align: right;
+  }
+</style>

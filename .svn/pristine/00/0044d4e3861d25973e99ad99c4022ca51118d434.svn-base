@@ -1,0 +1,159 @@
+<template>
+  <div class="contact-select-wrapper">
+    <!-- <SearchForm
+      :searchList="searchList"
+      name="查询条件"
+      @on-filter="toSearch">
+    </SearchForm> -->
+    <a-card>
+      <Heading name="查询结果"> </Heading>
+      <a-table
+        size="small"
+        rowKey="vendorUserId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :customRow="rowClick"
+        :scroll="{ x: true }"
+        :rowSelection="{
+          fixed: true,
+          type: 'radio',
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange
+        }">
+        <template slot="action" slot-scope="record">
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.noticeChangeId)"
+          >
+            查看公告明细
+          </a>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange">
+      </pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+  //import SearchForm from "@/components/form/SearchForm";
+  import Heading from "@/components/heading/Heading";
+  import Pagination from "@/components/pagination/Pagination";
+  import { getNoticeChangeRecordList } from "@/services/bid";
+  export default {
+    name: "contact-select",
+    components: { Heading, Pagination },
+    props: {
+      param: {
+        type: Object,
+        default() {
+          return {}
+        }
+      }
+    },
+    data() {
+      return {
+        filter: {},
+        selectedRowKeys: [],
+        selectedRows: [],
+        dataSource: [],
+        pageData: {
+          limit: 10,
+          total: 0,
+          page: 1,
+          loading: false
+        },
+        columns: [
+          {
+            title: "序号",
+            dataIndex: "number",
+            align: "center",
+            customRender: (text, record, index) =>
+              `${(this.pageData.page - 1) * this.pageData.limit + index + 1}`,
+            width: 80
+          },
+          {
+            title: "公告名称",
+            dataIndex: "userName",
+            align: "center"
+          },
+          {
+            title: "变更时间",
+            dataIndex: "userPhone",
+            align: "center"
+          },
+          {
+            title: "变更操作账号",
+            dataIndex: "userName",
+            align: "center"
+          },
+          {
+            title: "操作",
+            dataIndex: "action",
+            align: "center",
+            width: 100,
+            scopedSlots: { customRender: "action" }
+          }
+        ]
+      };
+    },
+    created() {
+      this.getData();
+    },
+    activated() {
+      this.getData();
+    },
+    methods: {
+      getData() {
+        let param = Object.assign(
+          {
+            limit: this.pageData.limit,
+            page: this.pageData.page
+          },
+          this.param
+        );
+        this.pageData.loading = true;
+        getNoticeChangeRecordList(param).then(res => {
+          const resData = res.data || {};
+          if (resData.errCode == "0000") {
+            this.dataSource = resData.responseResult.data || [];
+            this.pageData.total = Number(resData.responseResult.total);
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+          this.pageData.loading = false;
+        });
+      },
+      handleAction(id) {
+        this.$router.push({
+          path: `/bid/tender/notice-change/${id}`
+        });
+      },
+      onSelectChange(data, row) {
+        this.selectedRowKeys = data;
+        this.selectedRows = row;
+      },
+      sizeChange(page, pageSize) {
+        this.pageData.page = page;
+        this.pageData.limit = pageSize;
+        this.getData();
+      },
+      pageChange(current, size) {
+        this.pageData.page = current;
+        this.pageData.limit = size;
+        this.getData();
+      }
+    }
+  };
+</script>

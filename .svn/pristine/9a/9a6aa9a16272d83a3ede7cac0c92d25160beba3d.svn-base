@@ -1,0 +1,244 @@
+<template>
+  <a-row type="flex">
+    <a-col :flex="1">
+      <a-card>
+        <Heading name="层级"></Heading>
+        <a-tree
+          v-if="treeData.length > 0"
+          show-line
+          @select="onSelect"
+          :tree-data="this.treeData"
+          :defaultExpandAll="true"
+        />
+      </a-card>
+    </a-col>
+    <a-col :flex="4">
+      <div>
+        <!-- 查询条件 -->
+        <SearchForm
+          ref="SearchForm"
+          :searchList="searchList"
+          name="查询条件"
+          @on-filter="toSearch"
+        ></SearchForm>
+        <!-- 查询结果 -->
+        <a-card>
+          <a-table
+            size="small"
+            :loading="pageData.loading"
+            :pagination="false"
+            :columns="columns"
+            :dataSource="dataSource"
+            :rowSelection="{
+              fixed: true,
+              selectedRowKeys: selectedRowKeys,
+              onChange: onSelectChange
+            }"
+            :scroll="{ x: true }"
+            rowKey="businessKey"
+          >
+            <a slot="projectCode" slot-scope="text">{{ text }}</a>
+          </a-table>
+          <pagination
+            :value="pageData.page"
+            :pageSize="pageData.limit"
+            v-show="pageData.total > 0"
+            :total="pageData.total"
+            @change="sizeChange"
+            @showSizeChange="pageChange"
+          ></pagination>
+        </a-card>
+      </div>
+    </a-col>
+  </a-row>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import {
+  cptForfindContractingTenderProjectInfo,
+  cptForFindSubContractOfDetailIds,
+  cptForfindContractingTenderProjectDetailInfo
+} from "@/services/other";
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 100
+  },
+  {
+    title: "产品编码",
+    dataIndex: "productCode"
+  },
+  {
+    title: "产品名称",
+    dataIndex: "productName"
+  },
+  {
+    title: "产品单位",
+    dataIndex: "measure"
+  },
+  {
+    title: "总数量",
+    dataIndex: "totalAmount"
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "产品名称",
+    key: "productName"
+  },
+  {
+    type: "input",
+    label: "产品编码",
+    key: "productCode"
+  }
+];
+
+export default {
+  name: "sub-contract-product-select",
+  components: { SearchForm, Pagination, Heading },
+  data() {
+    return {
+      treeData: [],
+      selectedKeys: [],
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      filter: {},
+      pageData: {
+        limit: 15,
+        total: 0,
+        page: 1,
+        loading: false
+      },
+      projectId: this.$route.params.id
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  watch: {
+    treeData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.getData();
+      this.findTree();
+      this.findIds();
+    },
+    toSearch(data) {
+      this.filter = data;
+      this.getData();
+    },
+    findTree() {
+      cptForfindContractingTenderProjectInfo({
+        projectId: this.projectId
+      }).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.treeData.push(responseResult);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    findIds() {
+      cptForFindSubContractOfDetailIds(this.projectId).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.selectedRowKeys = responseResult;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    onSelect(selectedKeys) {
+      this.$refs.SearchForm.handleReset();
+      this.filter = {};
+      this.selectedKeys = selectedKeys;
+      (this.pageData.page = 1), this.getData();
+    },
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          subcontractingId: this.selectedKeys[0] || "",
+          projectId: this.projectId
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      cptForfindContractingTenderProjectDetailInfo(param).then(res => {
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    },
+    getRes() {
+      return this.selectedRowKeys;
+    }
+  }
+};
+</script>

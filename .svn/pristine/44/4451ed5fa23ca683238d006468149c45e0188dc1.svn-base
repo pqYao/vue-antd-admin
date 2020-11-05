@@ -1,0 +1,163 @@
+<template>
+  <div>
+    <!-- 查询条件 -->
+    <SearchForm
+      :searchList="searchList"
+      name="查询条件"
+      @on-filter="toSearch"
+    ></SearchForm>
+
+    <!-- 查询结果 -->
+    <a-card>
+      <Heading name="查询结果"> </Heading>
+
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          type: 'radio',
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange
+        }"
+        :scroll="{ x: true }"
+        rowKey="vendorId"
+      >
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findAgencyInfoByPage } from "@/services/userinfo";
+
+const pageData = {
+  limit: 10,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 80
+  },
+  {
+    title: "代理机构名称",
+    dataIndex: "vendorName",
+    align: "center"
+  },
+  {
+    title: "代理机构编码",
+    dataIndex: "vendorCode",
+    align: "center"
+  },
+  {
+    title: "统一社会信用代码/组织结构代码/身份证号码",
+    dataIndex: "creditCode",
+    align: "center"
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "代理机构名称",
+    key: "vendorName"
+  }
+];
+
+export default {
+  name: "QueryList",
+  components: { Heading, SearchForm, Pagination },
+  data() {
+    return {
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      filter: {},
+      pageData: pageData
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary", "user"])
+  },
+  created() {
+    this.getData();
+  },
+  activated() {
+    this.getData();
+  },
+  methods: {
+    toSearch(data) {
+      this.filter = data;
+      this.getData();
+    },
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findAgencyInfoByPage(param).then(res => {
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            content: resData.customMess
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    },
+    getRes() {
+      return this.selectedRows[0];
+    }
+  }
+};
+</script>

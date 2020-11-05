@@ -1,0 +1,257 @@
+<template>
+  <div>
+    <!-- 查询条件 -->
+    <SearchForm
+      :searchList="searchList"
+      name="查询条件"
+      @on-filter="toSearch"
+    ></SearchForm>
+
+    <!-- 查询结果 -->
+    <a-card>
+      <Heading name="查询结果"></Heading>
+
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange,
+        }"
+        :scroll="{ x: true }"
+        rowKey="projectId"
+      >
+        <a slot="projectCode" slot-scope="text">
+          {{ text }}
+        </a>
+        <a slot="projectName" slot-scope="text">
+          {{ text }}
+        </a>
+        <template slot="billState" slot-scope="text">
+          <a-tag :color="text === '1' ? 'blue' : 'green'">
+            {{ text }}
+          </a-tag>
+        </template>
+        <template slot="action" slot-scope="record">
+          <a style="margin-right: 8px" @click="handleEdit(record.projectId)">
+            编辑
+          </a>
+          <a style="margin-right: 8px" @click="handleDetail(record.projectId)">
+            查看
+          </a>
+          <a-popconfirm
+            title="确定完成分标?"
+            @confirm="() => handleFinlish(record)"
+          >
+            <a href="javascript:;" style="margin-right: 8px">分标完成</a>
+          </a-popconfirm>
+          <a style="margin-right: 8px" @click="visible = true"> 项目回退 </a>
+        </template>
+      </a-table>
+      <a-modal v-if="visible" v-model="visible" title="项目回退" @ok="handleOk">
+        <ProbackModal></ProbackModal>
+      </a-modal>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import ProbackModal from "@/components/modal/ProbackModal";
+import { findSubTenderByPage } from "@/services/bid";
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) => `${index + 1}`,
+    width: 80,
+  },
+  {
+    title: "项目编号",
+    dataIndex: "projectCode",
+    width: 180,
+    align: "center",
+    scopedSlots: { customRender: "projectCode" },
+  },
+  {
+    title: "项目名称",
+    dataIndex: "projectName",
+    align: "center",
+    scopedSlots: { customRender: "projectName" },
+  },
+  {
+    title: "业务状态",
+    dataIndex: "billState",
+    scopedSlots: { customRender: "billState" },
+    width: 100,
+    align: "center",
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    // fixed: "right"
+  },
+];
+
+const dataSource = [
+  // {
+  //   key: 1,
+  //   projectId: 1,
+  //   projectCode: "123",
+  //   projectName: "123",
+  // },
+];
+
+const searchList = [
+  {
+    type: "input",
+    label: "项目编号",
+    key: "projectCode",
+  },
+  {
+    type: "input",
+    label: "项目名称",
+    key: "projectName",
+  },
+  {
+    type: "select",
+    label: "业务状态",
+    key: "billState",
+  },
+];
+
+export default {
+  name: "QueryList",
+  components: { Heading, SearchForm, Pagination, ProbackModal },
+  data() {
+    return {
+      columns: columns,
+      dataSource,
+      searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      filter: {},
+      visible: false,
+      pageData: {
+        limit: 10,
+        total: 0,
+        page: 1,
+        loading: false,
+      },
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+  },
+  created() {
+    this.getData();
+  },
+  activated() {
+    this.getData();
+  },
+  methods: {
+    toSearch(data) {
+      delete data.createDateStart;
+      delete data.createDateEnd;
+      this.filter = data;
+      this.getData();
+    },
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+        },
+        this.filter
+      );
+      // this.pageData.loading = true;
+      findSubTenderByPage(param).then((res) => {
+        // console.log(res.data);
+        const findRes = res.data;
+        const responseResult = res.data.responseResult;
+        if (findRes.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$message.error(findRes.customMess, 3);
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.$message.info("选中行改变了");
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    handleEdit(id) {
+      this.$router.push({
+        path: `/bid/prepare/subtenderEdit/${id}`,
+      });
+    },
+    handleDetail(id) {
+      this.$router.push({
+        path: `/bid/prepare/subtenderShow/${id}`,
+      });
+    },
+    handleFinlish(record) {
+      record.billState = "2";
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.toSearch();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.toSearch();
+    },
+    showModal() {
+      this.visible = true;
+    },
+    handleOk() {
+      this.visible = false;
+    },
+  },
+};
+</script>
+<style lang="less" scoped>
+/deep/ .ant-modal-content {
+  width: 300px;
+  margin: 0 auto;
+}
+/deep/ .ant-modal-body {
+  background: none;
+}
+/deep/ .ant-modal-footer {
+  border: none;
+}
+// /deep/ .ant-modal-footer{
+//   text-align: center;
+// }
+/deep/ .ant-modal-footer > div {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 20px;
+}
+</style>

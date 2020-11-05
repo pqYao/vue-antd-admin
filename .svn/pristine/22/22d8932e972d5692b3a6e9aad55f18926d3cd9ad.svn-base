@@ -1,0 +1,87 @@
+<template>
+  <div class="package-info-wrapper">
+    <a-card>
+      <Heading name="标包信息"></Heading>
+      <Descriptions 
+        :list="labelList" 
+        :param="projectData" 
+        :jumpData="jumpData"> 
+      </Descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+export default {
+  name: "package-info",
+  props: {
+    projectData: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
+    url: {
+      type: String,
+      default: ""
+    },
+    purchaseTypeKey: {
+      type: String,
+      default: "purchaseType"
+    }
+  },
+  components: {
+    Heading: () => import("@/components/heading/Heading"),
+    Descriptions: () => import("@/components/descriptions/Description")
+  },
+  data() {
+    return {
+      jumpData: {},
+      labelList: [
+        {
+          label: "项目编号",
+          key: "projectCode",
+          show: true,
+          jump: true
+        },
+        {
+          label: "项目名称",
+          key: "projectName",
+          show: true,
+        },
+        {
+          label: "标名",
+          key: "sunTenderName",
+          show: true
+        },
+        { 
+          label: "包名", 
+          key: "sunContractName", 
+          show: true 
+        }
+      ]
+    };
+  },
+  created() {
+    this.fnInit();
+  },
+  watch: {
+    projectData() {
+      this.fnInit();
+    },
+    purchaseTypeKey() {
+      this.fnInit();
+    }
+  },
+  methods: {
+    fnInit() {
+      this.jumpData = {
+        projectCode: {
+          url: `${this.url}/${this.projectData.projectId}`
+        }
+      }
+      this.labelList[2].key = this.purchaseTypeKey;
+      // this.labelList[5].show = (this.projectData.entrustFlag == 1) ? true : false;
+    }
+  }
+};
+</script>

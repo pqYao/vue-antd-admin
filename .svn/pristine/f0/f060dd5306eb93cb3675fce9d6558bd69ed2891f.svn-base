@@ -1,0 +1,17 @@
+import { userinfo } from "@/services/api";
+import { request, METHOD } from "@/utils/request";
+
+/**
+ * 字典值
+ */
+export async function findAgencyInfoByPage(data) {
+  return request(
+    `${userinfo}/agencyInfo/findAgencyInfoByPage`,
+    METHOD.GET,
+    data
+  );
+}
+
+export default {
+  findAgencyInfoByPage
+};

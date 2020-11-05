@@ -1,0 +1,233 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="分标明细"></Heading>
+      <div class="table-operations" v-show="!isView">
+        <a-button type="primary" @click="handleAdd"> 新增 </a-button>
+        <a-popconfirm title="确定快捷分标?" @confirm="() => fastSubtender">
+          <a-button type="primary"> 快捷分标 </a-button>
+        </a-popconfirm>
+        <a-popconfirm title="确定批量删除?" @confirm="() => selectDelete">
+          <a-button type="primary"> 删除 </a-button>
+        </a-popconfirm>
+        <a-button type="primary"> 保存 </a-button>
+      </div>
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange,
+        }"
+        :scroll="{ x: true }"
+        rowKey="subtenderId"
+      >
+        <a slot="subtenderName" slot-scope="text, record">
+          <editable-cell
+            v-show="!isView"
+            :text="text"
+            :dataSource="dataSource"
+            @change="onCellChange(record.key, 'subtenderName', $event)"
+          >
+            {{ text }}
+          </editable-cell>
+        </a>
+        <!-- <template slot="action" slot-scope="record">
+          <a @click="handleDelete(record.key)">删除</a>
+        </template> -->
+        <template slot="action" slot-scope="text, record" v-if="!isView">
+          <a-popconfirm
+            title="确定删除?"
+            @confirm="() => onDelete(record.subtenderId)"
+          >
+            <a href="javascript:;">删除</a>
+          </a-popconfirm>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import EditableCell from "@/components/cell/EditableCell";
+import { findSubTenderForTender, addSubTenderForFast } from "@/services/bid";
+import pagination from "@/components/pagination/Pagination";
+import moment from "moment";
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) => `${index + 1}`,
+    width: 50,
+  },
+  {
+    title: "标名",
+    dataIndex: "subtenderName",
+    width: 180,
+    align: "center",
+    scopedSlots: { customRender: "subtenderName" },
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    width: 180,
+    // fixed: "right"
+  },
+];
+
+const dataSource = [
+  // {
+  //   key: 1,
+  //   subtenderId: 1,
+  //   subtenderName: "123",
+  // },
+  // {
+  //   key: 2,
+  //   subtenderId: 2,
+  //   subtenderName: "123",
+  // },
+];
+
+export default {
+  components: { EditableCell, Heading, pagination },
+  props: ["isView"],
+  data() {
+    return {
+      columns: columns,
+      dataSource,
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      filter: {},
+      pageData: {
+        limit: 10,
+        total: 0,
+        page: 1,
+        loading: false,
+      },
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+  },
+  created() {
+    this.getSubTenderDetail();
+  },
+  methods: {
+    getSubTenderDetail() {
+      let param = {
+        limit: this.pageData.limit,
+        page: this.pageData.page,
+        projectId: this.$route.params.id,
+      };
+      findSubTenderForTender(param).then((res) => {
+        console.log(res.data);
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            content: resData.customMess
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    handleAdd() {
+      const { dataSource } = this;
+      const newData = {
+        // key: count,
+        // subtenderId: 3,
+        subtenderName: "",
+      };
+      this.dataSource = [...dataSource, newData];
+      // this.count = count + 1;
+    },
+    fastSubtender() {
+      let param = {
+        projectId: this.$route.params.id,
+        createDate: moment(new Date()).format("YYYY-MM-DD"),
+        subtenderName: "标1",
+      };
+      addSubTenderForFast(param).then((res) => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          //....
+        } else {
+          this.$error({
+            content: resData.customMess
+          });
+        }
+      });
+    },
+    onSelectChange(data, row) {
+      // this.$message.info("选中行改变了");
+      // console.log(data);
+      // console.log(row);
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.toSearch();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.toSearch();
+    },
+    onCellChange(key, dataIndex, value) {
+      const dataSource = [...this.dataSource];
+      const target = dataSource.find((item) => item.key === key);
+      if (target) {
+        target[dataIndex] = value;
+        this.dataSource = dataSource;
+      }
+    },
+  },
+  onDelete(key) {
+    const dataSource = [...this.dataSource];
+    this.dataSource = dataSource.filter((item) => item.key !== key);
+  },
+  selectDelete() {
+    console.log(this.selectedRowKeys);
+  },
+  handleConfirmSame(rule, value, callback) {
+    // if () {
+    //     callback('11111')
+    // }
+    callback();
+  },
+};
+</script>
+<style lang="less" scoped>
+.table-operations {
+  text-align: right;
+
+  margin: 10px 5px;
+}
+.table-operations > button {
+  margin-right: 8px;
+}
+</style>

@@ -1,0 +1,255 @@
+<template>
+	<div class="answer-info-wrapper">
+		<a-card>
+      <Heading name="应答信息"></Heading>
+      <a-table
+        bordered
+        size="small"
+        class="es-table"
+        rowKey="replyDetailId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }">
+        <!-- 编辑状态 -->
+        <template slot="operationState" slot-scope="text">
+          {{ operationState[text] }}
+        </template>
+        <template
+          slot="action"
+          slot-scope="text, record"
+          v-if="pageType == 1">
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.replyDetailId, 1)">
+            编辑
+          </a>
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.replyDetailId, 0)">
+            查看
+          </a>
+        </template>
+      </a-table>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+	</div>
+</template>
+<script>
+	import { mapGetters } from "vuex";
+	import { getAnswerInfoList } from "@/services/response";
+	import { operationStateMap } from "@/services/basic";
+	export default {
+		name: "answer-info",
+		components: {
+			Heading: () => import("@/components/heading/Heading"),
+			pagination: () => import("@/components/pagination/Pagination")
+		},
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			}
+		},
+		data() {
+			return {
+				operationState: [],
+	      pageData: {
+	        limit: 15,
+	        total: 0,
+	        page: 1,
+	        loading: false
+	      },
+	      dataSource: [{
+	      	key: 1,
+	      	subtenderName: '1',
+	      	1: '1',
+	      	2: '1',
+	      	3: '1',
+	      }],
+	      columns: [],
+	      columnsData: [
+	        {
+	          title: "序号",
+	          dataIndex: "number",
+	          align: "center",
+	          customRender: (text, record, index) => `${index + 1}`,
+	          width: 80
+	        },
+	        {
+	          title: "标名",
+	          dataIndex: "tenderName",
+	          width: 100
+	        },
+	        {
+	          title: "包名",
+	          dataIndex: "contractName",
+	          width: 100,
+	        },
+	        {
+	          title: "未含税总价(元)",
+	          dataIndex: "totalMoneyFree",
+	          width: 170,
+	          align: 'right'
+	        },
+	        {
+	          title: "含税总价(元)",
+	          dataIndex: "totalMoney",
+	          width: 140,
+	          align: 'right'
+	        },
+	        {
+	          title: "税额(元)",
+	          dataIndex: "taxMoney",
+	          width: 120,
+	          align: 'right'
+	        },
+	        {
+	          title: "税率(%)",
+	          dataIndex: "taxRate",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "折扣率(%)",
+	          dataIndex: "encryptState",
+	          width: 150,
+	          align: 'center'
+	        },
+	        {
+	          title: "报价文件",
+	          dataIndex: "444",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "技术文件",
+	          dataIndex: "555",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "商务文件",
+	          dataIndex: "666",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "编辑状态",
+	          dataIndex: "operationState",
+	          width: 120,
+	          align: 'center',
+	          scopedSlots: { customRender: "operationState" },
+	        },
+	        {
+	          title: "操作",
+	          align: "center",
+	          scopedSlots: { customRender: "action" },
+	          width: 140,
+	          fixed: 'right'
+	        }
+	      ]
+			}
+		},
+		created() {
+			this.fnInit();
+		},
+		computed: {
+			...mapGetters("account", ["dictionary", "user"]),
+			projectId() {
+				return this.$route.params.id
+			}
+		},
+		methods: {
+			fnInit() {
+				//详情界面不展示操作列
+	      this.columns = [];
+	      let arr = [...this.columnsData],
+	        index = this.columnsData.length - 1;
+	      if (this.pageType == 0) {
+	        arr.splice(index, 1);
+	      }
+	      this.columns = [...arr];
+	      this.fnGetData();
+			},
+			fnGetData() {
+				let param = {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          projectId: this.projectId
+        }
+	      this.pageData.loading = true;
+	      getAnswerInfoList(param).then(res => {
+	        const resData = res.data || {};
+	        const responseResult = resData.responseResult || {};
+	        if (resData.errCode == "0000") {
+	          const { data, total } = responseResult;
+	          this.dataSource = data;
+	          this.pageData.total = Number(total);
+	        } else {
+	         this.$error({
+	            title: "错误提示",
+	            content: this.BASE.handleErrorMsg(resData)
+	          });
+	        }
+	        this.pageData.loading = false;
+	      });
+			},
+			//获取编辑状态的码表值
+	    getOperationStateList() {
+	      operationStateMap("providerReply").then(result => {
+	        const resData = result.data || {};
+	        const responseResult = resData.responseResult || {};
+	        if (resData.errCode === "0000") {
+	          let arr = {};
+	          for (var i in responseResult) {
+	            let key = i.split("_");
+	            if (!arr[key[0]]) arr[key[0]] = [];
+	            arr[key[0]][key[1]] = resData.responseResult[i];
+	          }
+	          for (const key in arr) {
+	            this.operationState = arr[key];
+	          }
+	        } else {
+	          this.$error({
+	            title: "错误提示",
+	            content: this.BASE.handleErrorMsg(resData)
+	          });
+	        }
+	      });
+	    },
+			handleAction(data, type) {
+				if (type == 0) {
+					console.log(data);
+				} else {
+					this.$router.push({
+		        path: `/response/answer-info-edit/${data}`
+		      });
+					console.log(data);
+				}
+			},
+			sizeChange(page, pageSize) {
+	      this.pageData.page = page;
+	      this.pageData.limit = pageSize;
+	      this.fnGetData();
+	    },
+	    pageChange(current, size) {
+	      this.pageData.page = current;
+	      this.pageData.limit = size;
+	      this.fnGetData();
+	    }
+		}
+	}
+</script>

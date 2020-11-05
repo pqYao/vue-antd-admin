@@ -1,0 +1,88 @@
+<template>
+  <div>
+    <Describe id="项目信息"></Describe>
+    <Detail :isView="isView" id="分标明细"></Detail>
+    <Product :isView="isView" id="产品明细"></Product>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import Describe from "./components/Describe";
+import Detail from "./components/Detail";
+import Product from "./components/Product";
+import Anchor from "@/components/anchor/Anchor";
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) => `${index + 1}`,
+    width: 100,
+  },
+  {
+    title: "标名",
+    dataIndex: "subtenderName",
+    // width: 180,
+    align: "center",
+    scopedSlots: { customRender: "subtenderName" },
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    // fixed: "right"
+  },
+];
+
+const dataSource = [
+  {
+    key: 1,
+    subtenderId: 1,
+    subtenderName: "123",
+  },
+  {
+    key: 2,
+    subtenderId: 2,
+    subtenderName: "123",
+  },
+];
+export default {
+  components: {
+    Describe,
+    Detail,
+    Product,
+    Anchor,
+  },
+  data() {
+    return {
+      columns: columns,
+      dataSource,
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      isView: false,
+      filter: {},
+      anchorList: ["项目信息", "分标明细", "产品明细"],
+      pageData: {
+        limit: 10,
+        total: 0,
+        page: 1,
+        loading: false,
+      },
+    };
+  },
+  created() {
+    console.log(this.$route.path.split("/"));
+    if (this.$route.path.split("/").reverse()[1] == "subtenderShow") {
+      this.isView = true;
+    }
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+  },
+  methods: {},
+};
+</script>

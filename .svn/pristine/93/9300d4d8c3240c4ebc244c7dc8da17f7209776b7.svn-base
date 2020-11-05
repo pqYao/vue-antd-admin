@@ -1,0 +1,80 @@
+<template>
+  <div class="dt-project-info-wrapper">
+    <project-info url="/bid/prepare/detail" :projectData="projectData"></project-info>
+  </div>
+</template>
+<script>
+export default {
+  name: "dt-project-info",
+  props: {
+    projectData: {
+      type: Object,
+      default() {
+        return {}
+      }
+    }
+  },
+  components: {
+    ProjectInfo: () => import("@/components/descriptions/ProjectInfo")
+  },
+  data() {
+    return {
+      jumpData: {},
+      labelList: [
+        {
+          label: "项目编号",
+          key: "projectCode",
+          show: true,
+          jump: true
+        },
+        {
+          label: "项目名称",
+          key: "projectName",
+          show: true,
+        },
+        { 
+          label: "是否委托", 
+          key: "entrustFlag", 
+          flag: true, 
+          show: true 
+        },
+        {
+          label: "采购方式",
+          key: "purchaseType",
+          show: true,
+          dic: true
+        },
+        {
+          label: "是否资格预审",
+          key: "prequalficationFlag",
+          flag: true, 
+          show: true,
+        },
+        { 
+          label: "代理机构名称", 
+          key: "agencyOrgName",
+          show: false 
+        }
+      ]
+    };
+  },
+  created() {
+    this.fnInit();
+  },
+  watch: {
+    projectData() {
+      this.fnInit();
+    }
+  },
+  methods: {
+    fnInit() {
+      this.jumpData = {
+        projectCode: {
+          url: `/bid/prepare/detail/${this.projectData.projectId}`
+        }
+      }
+      this.labelList[5].show = (this.projectData.entrustFlag == 1) ? true : false;
+    }
+  }
+};
+</script>

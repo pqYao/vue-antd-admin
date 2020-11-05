@@ -1,0 +1,178 @@
+<template>
+	<div class="answer-info-wrapper">
+		<a-card>
+      <Heading name="应答信息">
+        <div class="table-operations" v-if="pageType == 1">
+          <a-button type="primary" @click="fnRefresh">
+            <i :class="['iconfont', 'icon-baocun']"></i>
+            刷新
+          </a-button>
+        </div>
+      </Heading>
+      <a-table
+        bordered
+        size="small"
+        class="es-table"
+        rowKey="subtenderId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }">
+        <template
+          slot="action"
+          slot-scope="text, record"
+          v-if="pageType == 1">
+          <a-popconfirm
+            title="确定删除?"
+            @confirm="fnDeleteDivideTender(0, record.subtenderId)"
+          >
+            <a>删除</a>
+          </a-popconfirm>
+        </template>
+      </a-table>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+	</div>
+</template>
+<script>
+	import Heading from "@/components/heading/Heading";
+	export default {
+		name: "answer-info",
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			},
+			projectData: {
+				type: Object,
+				default() {
+					return {}
+				}
+			}
+		},
+		components: {
+			Heading
+		},
+		data() {
+			return {
+	      pageData: {
+	        limit: 15,
+	        total: 0,
+	        page: 1,
+	        loading: false
+	      },
+	      dataSource: [],
+	      columns: [],
+	      columnsData: [
+	        {
+	          title: "序号",
+	          dataIndex: "number",
+	          align: "center",
+	          customRender: (text, record, index) => `${index + 1}`,
+	          width: 80
+	        },
+	        {
+	          title: "标名",
+	          dataIndex: "subtenderName",
+	          width: 100
+	        },
+	        {
+	          title: "包名",
+	          dataIndex: "1",
+	          width: 100,
+	        },
+	        {
+	          title: "未含税总价(元)",
+	          dataIndex: "2",
+	          width: 140,
+	          align: 'right'
+	        },
+	        {
+	          title: "含税总价（元）",
+	          dataIndex: "3",
+	          width: 140,
+	          align: 'right'
+	        },
+	        {
+	          title: "税额（元）",
+	          dataIndex: "33",
+	          width: 100,
+	          align: 'right'
+	        },
+	        {
+	          title: "税率（%）",
+	          dataIndex: "44",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "折扣率（%）",
+	          dataIndex: "5",
+	          width: 130,
+	          align: 'center'
+	        },
+	        {
+	          title: "报价文件",
+	          dataIndex: "444",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "技术文件",
+	          dataIndex: "555",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "商务文件",
+	          dataIndex: "666",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "编辑状态",
+	          dataIndex: "66",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "操作",
+	          align: "center",
+	          scopedSlots: { customRender: "action" },
+	          width: 80
+	        }
+	      ]
+			}
+		},
+		created() {
+			this.fnInit();
+		},
+		methods: {
+			fnInit() {
+				//详情界面不展示操作列
+	      this.columns = [];
+	      let arr = [...this.columnsData],
+	        index = this.columnsData.length - 1;
+	      if (this.pageType == 0) {
+	        arr.splice(index, 1);
+	      }
+	      this.columns = [...arr];
+			},
+			fnRefresh() {
+
+			}
+		}
+	}
+</script>

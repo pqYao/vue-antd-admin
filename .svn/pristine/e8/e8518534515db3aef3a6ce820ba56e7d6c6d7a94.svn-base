@@ -1,0 +1,121 @@
+<template>
+  <a-card>
+    <Heading :name="noticeName">
+      <a-button type="primary" @click="handleClick('changeRecord')">
+        变更记录
+      </a-button>
+    </Heading>
+    <div class="notice-preview">
+      <h2 style="text-align:center">{{ formData.noticeTitle }}</h2>
+      <div v-html="formData.noticeContext"></div>
+      <div style="text-align:right" v-if="formData.entrustFlag == 0">
+        招标人：{{ formData.projectCreateUnitName }}
+      </div>
+      <div style="text-align:right" v-else>
+        招标人/招标代理机构：{{
+          formData.projectCreateUnitName ||
+            "--" + "/" + formData.agencyOrgName ||
+            "--"
+        }}
+      </div>
+      <div style="text-align:right">
+        {{
+          BASE.DeleteTime(formData.operationFinishDate) ||
+            moment(new Date()).format("YYYY年MM月DD日")
+        }}
+      </div>
+    </div>
+    <a-modal
+      title="变更记录"
+      width="70%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="changeRecordVisible"
+      v-model="changeRecordVisible"
+      @ok="handleOk('changeRecord')"
+    >
+      <change-record ref="product"></change-record>
+    </a-modal>
+  </a-card>
+</template>
+<script>
+import moment from "moment";
+import Heading from "@/components/heading/Heading";
+import ChangeRecord from "@/components/table/ChangeRecord";
+
+import { findSendTenderNotice } from "@/services/bid";
+export default {
+  name: "notice-view",
+  components: { Heading, ChangeRecord },
+  props: {
+    noticeName: {
+      type: [String],
+      default: ""
+    }
+  },
+  data() {
+    return {
+      changeRecordVisible: false,
+      formData: {}
+    };
+  },
+  created() {
+    this.handleGetData();
+  },
+  activated() {
+    this.handleGetData();
+  },
+  computed: {
+    tenderVindicateId() {
+      return this.$route.params.id;
+    },
+    projectId() {
+      return this.$route.query.projectId;
+    }
+  },
+  methods: {
+    moment,
+    // 弹窗
+    handleClick(type) {
+      this[`${type}Visible`] = true;
+    },
+    handleOk(type) {
+      this[`${type}Visible`] = false;
+    },
+    // 获取数据
+    handleGetData() {
+      findSendTenderNotice(this.tenderVindicateId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult || {};
+          this.pushSystem = this.formData.pushSystem.split(",");
+          console.log(this.pushSystem);
+          this.tinymceRefresh = false;
+          this.$nextTick(() => {
+            this.tinymceRefresh = true;
+          });
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.notice-preview {
+  padding: 20px 30px;
+  div {
+    padding: 0 20px;
+    font-size: 14px;
+    line-height: 30px;
+  }
+  .title {
+    padding: 0;
+  }
+}
+</style>

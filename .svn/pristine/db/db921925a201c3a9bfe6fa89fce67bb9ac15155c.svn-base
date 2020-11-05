@@ -1,0 +1,31 @@
+<template>
+  <div>
+    <project-info
+      id="项目信息"
+      url="/bid/prepare/detail"
+      purchaseTypeKey="purchaseType"
+      :projectData="projectData"
+    >
+    </project-info>
+
+  </div>
+</template>
+<script>
+export default {
+  name: "enturst-detail",
+  components: {
+    ProjectInfo: () => import("@/components/descriptions/ProjectInfo")
+  },
+  data() {
+    return {
+      anchorList: ["项目信息", "基本信息"]
+    };
+  },
+  created() {
+    // this.fnGetProjectData();
+  },
+  activated() {
+    // this.fnGetProjectData();
+  }
+};
+</script>

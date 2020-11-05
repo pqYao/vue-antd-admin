@@ -1,0 +1,305 @@
+<template>
+  <div>
+    <!-- 查询条件 -->
+    <SearchForm
+      :searchList="searchList"
+      name="查询采购项目"
+      @on-filter="toSearch"
+    ></SearchForm>
+
+    <!-- 查询结果 -->
+    <a-card>
+      <Heading name="项目查询结果">
+        <a-button type="primary" @click="addNew">
+          <i :class="['iconfont', 'icon-xinzeng']"></i>
+          创建采购项目
+        </a-button>
+        <a-button type="primary" @click="handleDelete">
+          <i :class="['iconfont', 'icon-weibiaoti544']"></i>
+          批量删除
+        </a-button>
+      </Heading>
+
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange
+        }"
+        :scroll="{ x: true }"
+        rowKey="projectId"
+      >
+        <a slot="projectCode" slot-scope="text">
+          {{ text }}
+        </a>
+        <template slot="purchaseType" slot-scope="text">
+          {{ dictionary.purchaseType[text] }}
+        </template>
+        <template slot="itemState" slot-scope="text">
+          <a-tag :color="text === 1 ? 'red' : 'green'">
+            {{ dictionary.itemState[text] }}
+          </a-tag>
+        </template>
+        <template slot="billState" slot-scope="text">
+          <a-tag :color="text === 1 ? 'blue' : 'green'">
+            {{ dictionary.billState[text] }}
+          </a-tag>
+        </template>
+        <template slot="purchaseType" slot-scope="text">
+          {{ dictionary.purchaseType[text] }}
+        </template>
+        <template
+          :slot="slot"
+          v-for="slot in ['entrustFlag', 'prequalficationFlag']"
+          slot-scope="text"
+        >
+          {{ text === "1" ? "是" : "否" }}
+        </template>
+        <template slot="action">
+          <a style="margin-right: 8px" @click="handleEdit"> 编辑 </a>
+          <a style="margin-right: 8px" @click="handleDetail"> 查看 </a>
+          <a-popconfirm
+            title="是否删除此项目?"
+            ok-text="确认"
+            cancel-text="取消"
+          >
+            <a style="margin-right: 8px"> 删除 </a>
+          </a-popconfirm>
+          <a-dropdown>
+            <a class="ant-dropdown-link" @click="e => e.preventDefault()">
+              更多操作 <a-icon type="down" />
+            </a>
+            <a-menu slot="overlay" @click="handleMenuClick">
+              <a-menu-item key="1">
+                立项完成
+              </a-menu-item>
+              <a-menu-item key="2">
+                流程状态跟踪
+              </a-menu-item>
+              <a-menu-item key="3">
+                提交审批
+              </a-menu-item>
+            </a-menu>
+            <a-button> <a-icon type="down" /> </a-button>
+          </a-dropdown>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findProjectInfoByPage } from "@/services/bid";
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) => `${index + 1}`,
+    width: 100
+  },
+  {
+    title: "项目编码",
+    dataIndex: "projectCode",
+    width: 180,
+    align: "center",
+    scopedSlots: { customRender: "projectCode" }
+  },
+  {
+    title: "项目名称",
+    dataIndex: "projectName"
+  },
+  {
+    title: "采购方式",
+    dataIndex: "purchaseType",
+    scopedSlots: { customRender: "purchaseType" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "是否资格预审",
+    dataIndex: "prequalficationFlag",
+    scopedSlots: { customRender: "prequalficationFlag" },
+    width: 130,
+    align: "center"
+  },
+  {
+    title: "是否委托",
+    dataIndex: "entrustFlag",
+    scopedSlots: { customRender: "entrustFlag" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "创建时间",
+    dataIndex: "createDate",
+    width: 200,
+    align: "center"
+  },
+  {
+    title: "审批状态",
+    dataIndex: "itemState",
+    width: 100,
+    align: "center",
+    scopedSlots: { customRender: "itemState" }
+  },
+  {
+    title: "业务状态",
+    dataIndex: "billState",
+    scopedSlots: { customRender: "billState" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    fixed: "right"
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "项目编码",
+    key: "projectCode"
+  },
+  {
+    type: "input",
+    label: "项目名称",
+    key: "projectName"
+  },
+  {
+    type: "select",
+    label: "采购方式",
+    key: "purchaseType"
+  },
+  {
+    type: "flag",
+    label: "资格预审",
+    key: "prequalficationFlag",
+    flag: true
+  },
+  {
+    type: "flag",
+    label: "是否委托",
+    key: "entrustFlag"
+  },
+  { type: "date", label: "创建日期", key: "createDate" },
+  {
+    type: "select",
+    label: "审批状态",
+    key: "itemState"
+  },
+  {
+    type: "select",
+    label: "业务状态",
+    key: "billState"
+  }
+];
+
+export default {
+  name: "QueryList",
+  components: { Heading, SearchForm, Pagination },
+  data() {
+    return {
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      filter: {},
+      pageData: {
+        limit: 10,
+        total: 0,
+        page: 1,
+        loading: false
+      }
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.toSearch();
+    },
+    toSearch(data) {
+      this.filter = data;
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findProjectInfoByPage(param).then(res => {
+        const findRes = res.data;
+        if (findRes.code >= 0) {
+          const { data, total } = findRes.data;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$message.error(findRes.msg.message, 3);
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.$message.info("选中行改变了");
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    handleMenuClick(e) {
+      this.$message.info(e.key);
+    },
+    addNew() {
+      this.$router.push({
+        path: "/bid/prepare/add"
+      });
+    },
+    handleEdit() {},
+    handleDetail() {
+      // this.$router.push({
+      //   path: "/zbcg/zbzb/ck"
+      // });
+    },
+    handleDelete() {},
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.toSearch();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.toSearch();
+    }
+  }
+};
+</script>

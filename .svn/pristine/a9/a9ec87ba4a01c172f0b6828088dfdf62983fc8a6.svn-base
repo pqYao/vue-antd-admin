@@ -1,0 +1,51 @@
+<template>
+  <div class="bid-add has-anchor-content">
+    <BaseEdit id="基本信息"></BaseEdit>
+    <!-- <div id="附件管理"></div>
+    <file></file>
+    <div id="项目情况说明"></div>
+    <Explain></Explain>
+    <div id="产品明细"></div>
+    <Product></Product>
+    <div class="btn-wrapper">
+      <a-button type="primary" style="margin-right: 20px;margin-left: -10%;">
+        项目回退
+      </a-button>
+      <a-button type="primary">
+        编辑完成
+      </a-button>
+    </div> -->
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import BaseEdit from "./components/BaseEdit";
+// import file from "./components/file";
+// import Product from "./components/Product";
+import Anchor from "@/components/anchor/Anchor";
+// import Explain from "./components/Explain";
+
+export default {
+  components: { BaseEdit, Anchor },
+  data() {
+    return {
+      //   anchorList: ["基本信息", "附件管理", "项目情况说明", "产品明细"]
+      anchorList: ["基本信息"]
+    };
+  }
+};
+</script>
+<style lang="less" scoped>
+.btn-wrapper {
+  width: 100%;
+  position: fixed;
+  bottom: 0px;
+  height: 50px;
+  line-height: 50px;
+  margin: 0 -24px;
+  text-align: center;
+  background: #fff;
+  box-shadow: 0 -1px 2px @shadow-color;
+  z-index: 1100;
+}
+</style>

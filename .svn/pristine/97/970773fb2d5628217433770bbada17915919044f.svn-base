@@ -1,0 +1,77 @@
+<template>
+  <div class="sign-up-edit-wrapper">
+    <project-info 
+      id="项目信息"
+      url="/bid/prepare/detail" 
+      :projectData="projectData">
+    </project-info>
+    <contact-info 
+      id="联系人信息"
+      :pageType=1>
+    </contact-info>
+    <!-- 审批操作 -->
+    <audit-button>
+      <a-button 
+        type="primary" 
+        @click="fnCheckInvitation">
+        查看邀请函
+      </a-button>
+      <a-popconfirm
+        title="确定提交报名?"
+        @confirm="fnConfirm">
+        <a-button type="primary">
+          提交报名
+        </a-button>
+      </a-popconfirm>
+    </audit-button>
+    <!-- 显示内容较少，暂不需要锚 -->
+    <!--  <Anchor :anchorList="anchorList"></Anchor> -->
+  </div>
+</template>
+
+<script>
+import {mixins} from "./mixins.js";
+import { submitSignUp } from "@/services/response";
+
+export default {
+  name: 'sign-up-edit',
+  mixins: [mixins],
+  components: {
+    AuditButton: () => import("@/components/button/AuditButton")
+  },
+  data() {
+    return {
+    }
+  },
+  created() {
+    this.fnGetProjectData();
+  },
+  activated() {
+    this.fnGetProjectData();
+  },
+  methods: {
+    fnCheckInvitation() {
+      this.$router.push({
+        path: `/bid/prepare/detail/${this.projectData.projectId}`
+      });
+    },
+    fnConfirm() {
+      let param = {
+        projectId: this.projectData.projectId,
+        checkFlag: false
+      };
+      submitSignUp(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.fnGetData();
+          this.$message.success(resData.responseResult, 3);
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    }
+  },
+};
+</script>

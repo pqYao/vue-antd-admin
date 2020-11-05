@@ -1,0 +1,54 @@
+<template>
+  <a-card>
+    <div class="entrust-preview">
+      <h3 style="text-align:center">招标代理委托函</h3>
+      <div class="title">{{ agencyOrgName }}代理公司</div>
+      <div>
+        我司的{{
+          projectName
+        }}项目拟采用公开招标方式,经研究,现委托贵司作为本项目的招标代理机构。
+      </div>
+      <div v-html="content"></div>
+      <div>
+        本委托函自我司发出之日起生效，至本项目全部招标代理工作完成之日终止。
+      </div>
+      <div style="text-align:right">招标人：{{ tenderee }}</div>
+      <div style="text-align:right">{{ new Date().toLocaleDateString() }}</div>
+    </div>
+  </a-card>
+</template>
+<script>
+export default {
+  name: "entrust-preview",
+  data() {
+    return {};
+  },
+  computed: {
+    content() {
+      return this.$route.query.content;
+    },
+    tenderee() {
+      return this.$route.query.tenderee;
+    },
+    agencyOrgName() {
+      return this.$route.query.agencyOrgName;
+    },
+    projectName() {
+      return this.$route.query.projectName;
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.entrust-preview {
+  padding: 20px 30px;
+  div {
+    padding: 0 20px;
+    font-size: 14px;
+    line-height: 30px;
+  }
+  .title {
+    padding: 0;
+  }
+}
+</style>

@@ -1,0 +1,222 @@
+<template>
+	<div class="answer-info-wrapper">
+		<a-card>
+      <Heading name="应答信息">
+      	<template v-slot:leftIcon>
+      		<a-popover>
+						<template slot="content">
+				      <p>1、应答截止时间到期后，未编辑或未填写完成的包的应答信息将被视为放弃应答。</p>
+				      <p>2、应答信息在完成填写、加密、电子签名操作后，才视为为填写完成。</p>
+				    </template>
+      			<a-icon type="question-circle" />
+      		</a-popover>
+      	</template>
+      </Heading>
+      <a-table
+        bordered
+        size="small"
+        class="es-table"
+        rowKey="subtenderId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }">
+        <template
+          slot="action"
+          slot-scope="text, record"
+          v-if="pageType == 1">
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 1)">
+            编辑
+          </a>
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 0)">
+            查看
+          </a>
+        </template>
+      </a-table>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+	</div>
+</template>
+<script>
+	import { getAnswerInfoList } from "@/services/response";
+	export default {
+		name: "answer-info",
+		components: {
+			Heading: () => import("@/components/heading/Heading"),
+			pagination: () => import("@/components/pagination/Pagination")
+		},
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			},
+			projectData: {
+				type: Object,
+				default() {
+					return {}
+				}
+			}
+		},
+		data() {
+			return {
+	      pageData: {
+	        limit: 15,
+	        total: 0,
+	        page: 1,
+	        loading: false
+	      },
+	      dataSource: [],
+	      columns: [],
+	      columnsData: [
+	        {
+	          title: "序号",
+	          dataIndex: "number",
+	          align: "center",
+	          customRender: (text, record, index) => `${index + 1}`,
+	          width: 80
+	        },
+	        {
+	          title: "标名",
+	          dataIndex: "subtenderName",
+	          width: 100
+	        },
+	        {
+	          title: "包名",
+	          dataIndex: "1",
+	          width: 100,
+	        },
+	        {
+	          title: "未含税总价(元)",
+	          dataIndex: "2",
+	          width: 140,
+	          align: 'right'
+	        },
+	        {
+	          title: "含税总价(元)",
+	          dataIndex: "3",
+	          width: 140,
+	          align: 'right'
+	        },
+	        {
+	          title: "税额(元)",
+	          dataIndex: "33",
+	          width: 100,
+	          align: 'right'
+	        },
+	        {
+	          title: "税率(%)",
+	          dataIndex: "44",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "折扣率(%)",
+	          dataIndex: "5",
+	          width: 130,
+	          align: 'center'
+	        },
+	        {
+	          title: "报价文件",
+	          dataIndex: "444",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "技术文件",
+	          dataIndex: "555",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "商务文件",
+	          dataIndex: "666",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "编辑状态",
+	          dataIndex: "66",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "操作",
+	          align: "center",
+	          scopedSlots: { customRender: "action" },
+	          width: 80
+	        }
+	      ]
+			}
+		},
+		created() {
+			this.fnInit();
+		},
+		methods: {
+			fnInit() {
+				//详情界面不展示操作列
+	      this.columns = [];
+	      let arr = [...this.columnsData],
+	        index = this.columnsData.length - 1;
+	      if (this.pageType == 0) {
+	        arr.splice(index, 1);
+	      }
+	      this.columns = [...arr];
+			},
+			fnGetData() {
+				let param = {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        }
+	      this.pageData.loading = true;
+	      getAnswerInfoList(param).then(res => {
+	        const resData = res.data || {};
+	        const responseResult = resData.responseResult || {};
+	        if (resData.errCode == "0000") {
+	          const { data, total } = responseResult;
+	          this.dataSource = data;
+	          this.pageData.total = Number(total);
+	        } else {
+	         this.$error({
+	            title: "错误提示",
+	            content: this.BASE.handleErrorMsg(resData)
+	          });
+	        }
+	        this.pageData.loading = false;
+	      });
+			},
+			handleAction(data, type) {
+				if (type == 0) {
+					console.log(data);
+				} else {
+					console.log(data);
+				}
+			},
+			sizeChange(page, pageSize) {
+	      this.pageData.page = page;
+	      this.pageData.limit = pageSize;
+	      this.fnGetData();
+	    },
+	    pageChange(current, size) {
+	      this.pageData.page = current;
+	      this.pageData.limit = size;
+	      this.fnGetData();
+	    }
+		}
+	}
+</script>

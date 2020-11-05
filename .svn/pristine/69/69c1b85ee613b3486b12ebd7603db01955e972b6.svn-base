@@ -1,0 +1,53 @@
+<template>
+  <div class="dt-project-info-wrapper">
+    <a-card>
+      <Heading name="项目信息"></Heading>
+      <Descriptions :list="labelList" :param="projectData"> </Descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+export default {
+  name: "dt-project-info",
+  props: {
+    projectData: {
+      type: Object,
+      default() {
+        return {}
+      }
+    }
+  },
+  components: {
+    Heading: () => import("@/components/heading/Heading"),
+    Descriptions: () => import("@/components/descriptions/Description")
+  },
+  data() {
+    return {
+      dataSource: {},
+      labelList: [
+        {
+          label: "项目编号",
+          key: "projectCode",
+          show: true,
+          span: 1
+        },
+        {
+          label: "项目名称",
+          key: "projectName",
+          show: true,
+          span: 1
+        }
+      ]
+    };
+  },
+  created() {
+    this.dataSource = {...this.projectData};
+  },
+  watch: {
+    projectData() {
+      this.dataSource = {...this.projectData};
+    }
+  },
+  methods: {}
+};
+</script>

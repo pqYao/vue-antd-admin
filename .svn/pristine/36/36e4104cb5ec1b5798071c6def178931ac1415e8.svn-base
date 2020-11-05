@@ -1,0 +1,41 @@
+<template>
+  <div>
+    <span id="项目信息"> </span>
+    <Project @send-data="getData"></Project>
+    <span id="分包明细"> </span>
+    <SubContract :baseData="baseData"></SubContract>
+    <span id="产品明细"> </span>
+    <Product :baseData="baseData" :isDetail="true"></Product>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import Project from "./components/Project";
+import Product from "./components/Product";
+import Anchor from "@/components/anchor/Anchor";
+import SubContract from "./components/Product";
+
+export default {
+  components: { Project, Anchor, Product, SubContract },
+  data() {
+    return {
+      anchorList: ["项目信息", "分包明细"],
+      baseData: {}
+    };
+  },
+  watch: {
+    baseData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    getData(data) {
+      this.baseData = data;
+    }
+  }
+};
+</script>

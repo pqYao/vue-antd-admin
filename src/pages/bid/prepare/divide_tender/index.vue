@@ -1,0 +1,350 @@
+<template>
+  <div class="divide-tender-wrapper">
+    <SearchForm
+      ref="SearchForm"
+      name="查询条件"
+      stateCode="subTender"
+      :searchList="searchList"
+      @on-filter="handleSearch"
+    >
+    </SearchForm>
+    <a-card>
+      <Heading name="查询结果"></Heading>
+      <a-table
+        size="small"
+        rowKey="projectId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :scroll="{ x: 1300 }"
+        :columns="columns"
+        :dataSource="dataSource"
+      >
+        <!-- 点击项目编号跳转 -->
+        <template slot="projectCode" slot-scope="text, record">
+          <a @click="fnJumpPage(record)">{{ text }}</a>
+        </template>
+        <!-- 采购方式 -->
+        <template slot="purchaseType" slot-scope="text">
+          {{ dictionary.purchaseType ? dictionary.purchaseType[text] : "" }}
+        </template>
+        <!-- 是否委托 -->
+        <template slot="entrustFlag" slot-scope="text">
+          {{ text == "1" ? "是" : "否" }}
+        </template>
+        <!-- 是否资格预审 -->
+        <template slot="prequalficationFlag" slot-scope="text">
+          {{ text == "1" ? "是" : "否" }}
+        </template>
+        <!-- 业务状态 -->
+        <template slot="operationState" slot-scope="text">
+          {{ text ? operationState[text] : "" }}
+        </template>
+        <!-- 审批状态 -->
+        <template slot="approveState" slot-scope="text">
+          {{ dictionary.approveState ? dictionary.approveState[text] : "" }}
+        </template>
+        <template slot="action" slot-scope="record">
+          <!-- 
+            当前登录人为单据的创建人
+            业务状态为待分标和分标中展示编辑、分标完成、项目退回三个按钮
+          -->
+          <a
+            v-if="
+              record.createId === user.userId && record.operationState != '202'
+            "
+            style="margin-right: 8px"
+            @click="handleEdit(record.projectId)"
+          >
+            编辑
+          </a>
+          <!-- 分标完成展示查看按钮 -->
+          <a
+            v-if="record.operationState == '202'"
+            style="margin-right: 8px"
+            @click="handleDetail(record.projectId)"
+          >
+            查看
+          </a>
+          <a-popover content="此功能暂不支持">
+            <a> 业务流程跟踪 </a>
+          </a-popover>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+    <!-- 项目回退弹框 -->
+    <a-modal
+      v-if="isProjectBackVisible"
+      v-model="isProjectBackVisible"
+      title="项目回退"
+      :closable="false"
+      :centered="true"
+      :maskClosable="false"
+      :bodyStyle="{ backgroundColor: 'white' }"
+      @ok="handleProjectBackOk"
+    >
+      <ProbackModal></ProbackModal>
+    </a-modal>
+  </div>
+</template>
+
+<script>
+import Heading from "@/components/heading/Heading";
+import SearchForm from "@/components/form/SearchForm";
+import Pagination from "@/components/pagination/Pagination";
+import ProbackModal from "@/components/modal/ProbackModal";
+import { mapGetters } from "vuex";
+import { operationStateMap } from "@/services/basic";
+import { findSubTenderByPage } from "@/services/bid";
+
+export default {
+  name: "divide-tender",
+  components: {
+    Heading,
+    SearchForm,
+    Pagination,
+    ProbackModal
+  },
+  // components: {
+  //   Heading: () => import("@/components/heading/Heading"),
+  //   // SearchForm: () => import("@/components/form/SearchForm"),
+  //   Pagination: () => import("@/components/pagination/Pagination"),
+  //   ProbackModal: () => import("@/components/modal/ProbackModal")
+  // },
+  data() {
+    return {
+      //项目回退弹框
+      isProjectBackVisible: false,
+      filter: {},
+      operationState: [],
+      pageData: {
+        limit: 15,
+        total: 0,
+        page: 1,
+        loading: false
+      },
+      dataSource: [],
+      searchList: [
+        {
+          type: "input",
+          label: "项目编号",
+          key: "projectCode"
+        },
+        {
+          type: "input",
+          label: "项目名称",
+          key: "projectName"
+        },
+        {
+          type: "select",
+          label: "采购方式",
+          key: "purchaseType"
+        },
+        {
+          type: "flag",
+          label: "是否委托",
+          key: "entrustFlag"
+        },
+        {
+          type: "flag",
+          label: "是否资格预审",
+          key: "prequalficationFlag"
+        },
+        {
+          type: "operationState",
+          label: "业务状态",
+          key: "operationState"
+        },
+        // {
+        //   type: "select",
+        //   label: "审批状态",
+        //   key: "approveState",
+        // },
+        {
+          type: "date",
+          label: "项目创建时间",
+          key: "createDate"
+        }
+      ],
+      columns: [
+        {
+          title: "序号",
+          dataIndex: "number",
+          align: "center",
+          customRender: (text, record, index) =>
+            `${(this.pageData.page - 1) * this.pageData.limit + index + 1}`,
+          width: 60
+        },
+        {
+          title: "项目编号",
+          dataIndex: "projectCode",
+          width: 150,
+          align: "center",
+          scopedSlots: { customRender: "projectCode" }
+        },
+        {
+          title: "项目名称",
+          dataIndex: "projectName",
+          scopedSlots: { customRender: "projectName" },
+          ellipsis: true
+        },
+        {
+          title: "采购方式",
+          dataIndex: "purchaseType",
+          scopedSlots: { customRender: "purchaseType" },
+          width: 80,
+          align: "center"
+        },
+        {
+          title: "是否委托",
+          dataIndex: "entrustFlag",
+          scopedSlots: { customRender: "entrustFlag" },
+          width: 80,
+          align: "center"
+        },
+        {
+          title: "是否资格预审",
+          dataIndex: "prequalficationFlag",
+          scopedSlots: { customRender: "prequalficationFlag" },
+          width: 100,
+          align: "center"
+        },
+        {
+          title: "项目创建时间",
+          dataIndex: "createDate",
+          width: 180,
+          align: "center"
+        },
+        // {
+        //   title: "审批状态",
+        //   dataIndex: "approveState",
+        //   scopedSlots: { customRender: "approveState" },
+        //   width: 100,
+        //   align: "center",
+        // },
+        {
+          title: "业务状态",
+          dataIndex: "operationState",
+          scopedSlots: { customRender: "operationState" },
+          width: 100,
+          align: "center"
+        },
+        {
+          title: "操作",
+          align: "center",
+          width: 180,
+          fixed: "right",
+          scopedSlots: { customRender: "action" }
+        }
+      ]
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary", "user"])
+  },
+  created() {
+    this.getSubTenderStateList();
+    this.fnGetData();
+  },
+  activated() {
+    this.$refs.SearchForm.handleReset();
+    this.filter = {};
+    this.getSubTenderStateList();
+    this.fnGetData();
+  },
+  methods: {
+    fnGetData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findSubTenderByPage(param).then(res => {
+        const resData = res.data || {};
+        const responseResult = resData.responseResult || {};
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    getSubTenderStateList() {
+      operationStateMap("subTender").then(result => {
+        const resData = result.data || {};
+        const responseResult = resData.responseResult || {};
+        if (resData.errCode === "0000") {
+          let arr = {};
+          for (var i in responseResult) {
+            let key = i.split("_");
+            if (!arr[key[0]]) arr[key[0]] = [];
+            arr[key[0]][key[1]] = resData.responseResult[i];
+          }
+          for (const key in arr) {
+            this.operationState = arr[key];
+          }
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    handleEdit(id) {
+      this.$router.push({
+        path: `/bid/prepare/divide-tender-edit/${id}`
+      });
+    },
+    handleDetail(id) {
+      this.$router.push({
+        path: `/bid/prepare/divide-tender-detail/${id}`
+      });
+    },
+    handleSearch(data) {
+      this.filter = data;
+      this.pageData.page = 1;
+      this.fnGetData();
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.fnGetData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.fnGetData();
+    },
+    fnProjectBack() {
+      //this.isProjectBackVisible = true;
+    },
+    //确认项目回退
+    handleProjectBackOk() {
+      this.isProjectBackVisible = false;
+    },
+    fnJumpPage(record) {
+      this.$router.push({
+        path: `/bid/prepare/detail/${record.projectId}`
+      });
+    }
+  }
+};
+</script>

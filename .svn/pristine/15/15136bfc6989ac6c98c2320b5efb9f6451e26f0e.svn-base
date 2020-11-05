@@ -1,0 +1,86 @@
+<template>
+  <div class="sign-up-edit-wrapper">
+    <package-info 
+      id="标包信息"
+      :pageType=1>
+    </package-info>
+    <quote-price
+      id="报价信息"
+      :pageType=1>
+    </quote-price>
+    <quote-file
+      id="投标文件"
+      :pageType=1
+      tableName="投标文件">
+    </quote-file>
+    <technology-file
+      id="技术文件"
+      :pageType=1
+      tableName="技术文件">
+    </technology-file>
+    <business-file
+      id="商务文件"
+      :pageType=1
+      tableName="商务文件">
+    </business-file>
+    <!-- 审批操作 -->
+    <audit-button>
+      <a-button 
+        type="primary" 
+        @click="fnCheckInvitation">
+        撤回应答信息
+      </a-button>
+      <a-button 
+        type="primary" 
+        @click="fnCheckInvitation">
+        提交应答信息
+      </a-button>
+      <a-button 
+        type="primary" 
+        @click="fnCheckInvitation">
+        电子签名
+      </a-button>
+      <a-button 
+        type="primary" 
+        @click="fnCheckInvitation">
+        加密
+      </a-button>
+    </audit-button>
+    <Anchor :anchorList="anchorList"></Anchor>
+  </div>
+</template>
+
+<script>
+import {mixins} from "./mixins.js";
+
+export default {
+  name: 'sign-up-edit',
+  mixins: [mixins],
+  components: {
+    AuditButton: () => import("@/components/button/AuditButton"),
+    PackageInfo: () => import("./components/PackageInfo"),
+    QuotePrice: () => import("./components/QuotePrice"),
+    QuoteFile: () => import("./components/FileTable"),
+    TechnologyFile: () => import("./components/FileTable"),
+    BusinessFile: () => import("./components/FileTable"),
+  },
+  data() {
+    return {
+      anchorList: ["标包信息", "报价信息", "报价文件", "技术文件", "商务文件"]
+    }
+  },
+  created() {
+    this.fnGetProjectData();
+  },
+  activated() {
+    this.fnGetProjectData();
+  },
+  methods: {
+    fnCheckInvitation() {
+      this.$router.push({
+        path: `/bid/prepare/detail/${this.projectData.projectId}`
+      });
+    }
+  },
+};
+</script>

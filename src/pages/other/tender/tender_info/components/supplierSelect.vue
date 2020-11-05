@@ -1,0 +1,293 @@
+<template>
+  <a-row type="flex">
+    <a-col :flex="1">
+      <a-card>
+        <Heading name="层级"></Heading>
+        <a-tree
+          v-if="treeData.length > 0"
+          show-line
+          @select="onSelect"
+          :defaultExpandedKeys="defaultExpandedKeys"
+          :defaultSelectedKeys="selectedKeys"
+          :tree-data="this.treeData"
+        />
+      </a-card>
+    </a-col>
+    <a-col :flex="4">
+      <div>
+        <!-- 查询条件 -->
+        <SearchForm
+          ref="SearchForm"
+          :searchList="searchList"
+          name="查询条件"
+          @on-filter="toSearch"
+        ></SearchForm>
+        <!-- 查询结果 -->
+        <a-card>
+          <a-table
+            class="es-table"
+            size="small"
+            :loading="pageData.loading"
+            :pagination="false"
+            :columns="columns"
+            :dataSource="dataSource"
+            :rowSelection="{
+              fixed: true,
+              selectedRowKeys: selectedRowKeys,
+              onChange: onSelectChange
+            }"
+            :scroll="{ x: true }"
+            rowKey="businessKey"
+          >
+            <template slot="orgType" slot-scope="text">
+              {{ dictionary.orgType ? dictionary.orgType[text] : "--" }}
+            </template>
+          </a-table>
+          <pagination
+            :value="pageData.page"
+            :pageSize="pageData.limit"
+            v-show="pageData.total > 0"
+            :total="pageData.total"
+            @change="sizeChange"
+            @showSizeChange="pageChange"
+          ></pagination>
+        </a-card>
+      </div>
+    </a-col>
+  </a-row>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findVendorInfoByPage } from "@/services/userinfo";
+import {
+  cptForfindContractingTenderProjectInfo,
+  findSelectVendorBusinessKey
+} from "@/services/other";
+const pageData = {
+  limit: 10,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 100
+  },
+  {
+    title: "供应商名称",
+    dataIndex: "vendorName",
+    align: "center"
+  },
+  {
+    title: "供应商编码",
+    dataIndex: "vendorCode",
+    align: "center"
+  },
+  {
+    title: "组织机构类型",
+    scopedSlots: { customRender: "orgType" },
+    dataIndex: "orgType",
+    align: "center"
+  },
+  {
+    title: "统一社会信用代码",
+    dataIndex: "creditCode",
+    align: "center"
+  }
+];
+
+const searchList = [
+  {
+    type: "input",
+    label: "供应商名称",
+    key: "vendorName"
+  },
+  {
+    type: "input",
+    label: "供应商编码",
+    key: "vendorCode"
+  },
+  {
+    type: "select",
+    label: "组织机构类型",
+    key: "orgType"
+  }
+];
+
+export default {
+  name: "supplier-select",
+  components: { SearchForm, Pagination, Heading },
+  data() {
+    return {
+      treeData: [],
+      selectedKeys: [],
+      columns,
+      dataSource: [],
+      searchList,
+      defaultExpandedKeys: [],
+      selectedRowKeys: [],
+      selectedRows: [],
+      filter: {},
+      pageData: {
+        limit: 15,
+        total: 0,
+        page: 1,
+        loading: false
+      }
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    projectId() {
+      return this.$route.query.projectId;
+    },
+    tenderVindicateId() {
+      return this.$route.params.id;
+    }
+  },
+  watch: {
+    treeData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      this.handleGetData();
+      this.findTree();
+      this.findIds();
+    },
+    toSearch(data) {
+      this.pageData.page = 1;
+      this.filter = data;
+      this.handleGetData();
+    },
+    // 树结构
+    findTree() {
+      cptForfindContractingTenderProjectInfo({
+        projectId: this.projectId,
+        canSelectLevel: ""
+      }).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.treeData.push(responseResult);
+          this.treeData.forEach(item => {
+            if (item.children.length > 0) {
+              if (!item.selectDefault) {
+                item.children.forEach(items => {
+                  this.recursive(items);
+                });
+                return;
+              }
+            }
+          });
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    // 递归
+    recursive(item) {
+      if (!item.selectDefault) {
+        item.children.forEach(ff => {
+          this.recursive(ff);
+        });
+        return;
+      }
+      if (this.defaultExpandedKeys.length > 0) {
+        return;
+      }
+      this.defaultExpandedKeys = [`${item.key}`];
+      this.selectedKeys = [`${item.key}`];
+      this.handleGetData();
+    },
+    // 已选中id
+    findIds() {
+      findSelectVendorBusinessKey(this.tenderVindicateId).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.selectedRowKeys = responseResult;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    // 切换选中清空搜索条件
+    onSelect(selectedKeys) {
+      this.$refs.SearchForm.handleReset();
+      this.filter = {};
+      this.selectedKeys = selectedKeys;
+      (this.pageData.page = 1), this.handleGetData();
+    },
+    // 分页查询
+    handleGetData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          subcontractingId: this.selectedKeys[0] || ""
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findVendorInfoByPage(param).then(res => {
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.handleGetData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.handleGetData();
+    },
+    // 数据挂载到getRes上
+    getRes() {
+      return this.selectedRowKeys;
+    }
+  }
+};
+</script>

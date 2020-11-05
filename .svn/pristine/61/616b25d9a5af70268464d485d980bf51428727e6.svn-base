@@ -1,0 +1,48 @@
+<template>
+  <a-card>
+    <div class="notice-preview">
+      <h3 style="text-align:center">{{ title }}</h3>
+      <div v-html="content"></div>
+      <div style="text-align:right">招标人：{{ tenderee }}</div>
+      <div style="text-align:right">
+        {{ moment(new Date()).format("YYYY年MM月DD日") }}
+      </div>
+    </div>
+  </a-card>
+</template>
+<script>
+import moment from "moment";
+export default {
+  name: "notice-preview",
+  data() {
+    return {};
+  },
+  computed: {
+    content() {
+      return this.$route.query.content;
+    },
+    tenderee() {
+      return this.$route.query.tenderee;
+    },
+    title() {
+      return this.$route.query.title;
+    }
+  },
+  methods: {
+    moment
+  }
+};
+</script>
+<style lang="less" scoped>
+.notice-preview {
+  padding: 20px 30px;
+  div {
+    padding: 0 20px;
+    font-size: 14px;
+    line-height: 30px;
+  }
+  .title {
+    padding: 0;
+  }
+}
+</style>

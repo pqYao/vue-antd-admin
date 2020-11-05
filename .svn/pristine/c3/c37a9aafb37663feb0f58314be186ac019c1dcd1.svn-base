@@ -1,0 +1,129 @@
+import { prepare } from "@/services/api";
+import { request, METHOD } from "@/utils/request";
+
+// 招标采购
+// 采购项目分页
+export async function findProjectInfoByPage(data) {
+  return request(
+    `${prepare}/esBProject/findProjectInfoByPage`,
+    METHOD.GET,
+    data
+  );
+}
+// 新增采购项目
+export async function addProjectInfo(data) {
+  return request(`${prepare}/esBProject/addProjectInfo`, METHOD.POST, data);
+}
+// 查询采购项目
+export async function findProjectInfoById(projectId) {
+  return request(
+    `${prepare}/esBProject/findProjectInfoByPage/${projectId}`,
+    METHOD.GET
+  );
+}
+// 更新采购项目
+export async function updateProjectInfo(data) {
+  return request(
+    `${prepare}/esBProject/updateProjectInfo
+    `,
+    METHOD.PUT,
+    data
+  );
+}
+// 删除采购项目
+export async function deleteProjectInfo(projectIds) {
+  return request(
+    `${prepare}/esBProject/deleteProjectInfo/${projectIds}
+    `,
+    METHOD.DELETE
+  );
+}
+// 验证项目名称是否重复
+export async function validateProjectName(projectId, projectName) {
+  return request(`${prepare}/esBProject/validateProjectName`, METHOD.GET, {
+    projectName: projectName,
+    projectId: projectId
+  });
+}
+// 查询采购项目情况说明信息
+export async function findProjectExplain(projectId) {
+  return request(
+    `${prepare}/esBProject/findProjectExplain/${projectId}
+    `,
+    METHOD.GET
+  );
+}
+// 更新采购项目情况说明信息
+export async function updateProjectExplain(data) {
+  return request(
+    `${prepare}/esBProject/updateProjectExplain
+    `,
+    METHOD.PUT,
+    data
+  );
+}
+// 查询采购项目产品明细信息
+export async function findProductInfoByPage(data) {
+  return request(
+    `${prepare}/esBProject/findProductInfoByPage`,
+    METHOD.GET,
+    data
+  );
+}
+// 查询已选中的产品id字符串
+export async function findProjectDetailString(projectId) {
+  return request(
+    `${prepare}/esBProject/findProjectDetailString/${projectId}`,
+    METHOD.GET
+  );
+}
+//新增采购项目产品明细
+export async function addProductInfo(productIds, projectId) {
+  return request(`${prepare}/esBProject/addProductInfo`, METHOD.POST, {
+    productIds: productIds,
+    projectId: projectId
+  });
+}
+//分标查询
+export async function findSubTenderByPage(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForPage`,
+    METHOD.GET,
+    data
+  );
+}
+//分标编辑-按项目id查询项目信息
+export async function findSubTenderForProjectById(projectId) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForProject/${projectId}`,
+    METHOD.GET
+  );
+}
+// //分标明细查询
+export async function findSubTenderForTender(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForTender`,
+    METHOD.GET,
+    data
+  );
+}
+// 快捷分标
+export async function addSubTenderForFast(data) {
+  return request(
+    `${prepare}/esBProject/addSubTenderForFast`,
+    METHOD.POST,
+    data
+  );
+}
+
+export default {
+  findProjectInfoByPage,
+  addProjectInfo,
+  findProjectInfoById,
+  updateProjectInfo,
+  deleteProjectInfo,
+  validateProjectName,
+  findProjectExplain,
+  updateProjectExplain,
+  findProductInfoByPage
+};

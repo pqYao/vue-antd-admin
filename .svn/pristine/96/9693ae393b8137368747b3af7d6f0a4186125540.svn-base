@@ -1,0 +1,354 @@
+<template>
+	<div class="purchase-files-wrapper">
+		<a-card>
+      <Heading name="采购文件">
+      	<template v-slot:leftIcon>
+      		<a-popover>
+						<template slot="content">
+				      <p>1、费用不为0的采购文件须完成付款并等待采购方确认后才能下载；免费的采购文件可直接下载。</p>
+				      <p>2、线上付款完成后，若付款状态未及时更新，请先联系工作人员处理，勿重复付款。</p>
+				    </template>
+      			<a-icon type="question-circle" />
+      		</a-popover>
+      	</template>
+      	<!-- 当单据的‘业务状态’为‘已过期’时，系统隐藏本按钮； -->
+      	<a-button type="primary" @click="fnFresh" v-if="pageType == 1">
+          <i :class="['iconfont', 'icon-baocun']"></i>
+          刷新
+        </a-button>
+      </Heading>
+      <a-table
+        bordered
+        size="small"
+        class="es-table"
+        rowKey="replyFileId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }">
+    		<!-- 付款凭证 -->
+        <template slot="paymentVoucher" slot-scope="text">
+        	<a>{{text}}</a>
+        </template>
+        <!-- 付款状态 -->
+        <template slot="operationState" slot-scope="text">
+          {{ operationState[text] }}
+        </template>
+        <!-- 付款方式 -->
+        <template slot="payMode" slot-scope="text">
+          {{ payMode[text] }}
+        </template>
+        <template slot="action" slot-scope="text, record">
+        	<!-- 400: "待付款",401: "已付款待确认",402: "已确认",403: "已过期" -->
+        	<!-- 当采购文件的购买费用为0时，系统默认展示【下载采购文件】；否则默认展示【线上付款】、【线下付款】 -->
+      		<!-- 付款状态为待付款’时展示线上付款和线下付款 -->
+      		<a-popconfirm
+            @confirm="handleAction(record, 0)">
+            <template slot="title">
+		          <p>若您已经完成付款、但“付款状态“未更新，请等待两分钟。</p>
+		          <p>若长时间未更新, 请先联系工作人员处理, 勿重复付款。</p>
+		          <p>确定要再次进行线上付款吗?</p>
+		        </template>
+            <a
+            	v-if="record.operationState == 400"
+	            style="margin-right: 8px">
+	            线上付款
+	          </a>
+          </a-popconfirm>
+          <a-popconfirm
+            @confirm="handleAction(record, 1)">
+            <template slot="title">
+		          <p>若您已经完成付款、但“付款状态“未更新, 请等待两分钟。</p>
+		          <p>若长时间未更新，请先联系工作人员处理, 勿重复付款。</p>
+		          <p>确定要改为线下付款吗?</p>
+		        </template>
+            <a
+            	v-if="record.operationState == 400"
+	            style="margin-right: 8px">
+	            线下付款
+	          </a>
+          </a-popconfirm>
+          <a-popconfirm
+            @confirm="handleAction(record, 2)">
+            <template slot="title">
+		          <p>取消付款后，可重新进行线下或线上付款操作。</p>
+		          <p>是否确认取消付款?</p>
+		        </template>
+            <a
+	          	v-if="record.operationState == 401"
+	            style="margin-right: 8px">
+	            取消付款
+	          </a>
+          </a-popconfirm>
+          <a
+          	v-if="record.bondMoney == 0"
+            style="margin-right: 8px"
+            @click="handleAction(record, 3)">
+            下载采购文件
+          </a>
+          <a-popover 
+          	placement="bottom"
+          	content="系统支持mht/rar/zip格式的附件上传，最大不能超30M.">
+	          <a
+	            style="margin-right: 8px"
+	            @click="handleAction(record, 4)">
+	            上传付款凭证
+	          </a>
+	        </a-popover>
+        </template>
+      </a-table>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+	</div>
+</template>
+<script>
+	import { mapGetters } from "vuex";
+	import { getPurchaseFilesList, purchaseFilesPay } from "@/services/response";
+	export default {
+		name: "purchase-files",
+		components: {
+			Heading: () => import("@/components/heading/Heading"),
+			pagination: () => import("@/components/pagination/Pagination"),
+		},
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			},
+			operationState: {
+				type: Array,
+				default() {
+					return []
+				}
+			},
+			payMode: {
+				type: Array,
+				default() {
+					return []
+				}
+			},
+		},
+		data() {
+			return {
+	      pageData: {
+	        limit: 15,
+	        total: 0,
+	        page: 1,
+	        loading: false
+	      },
+	      dataSource: [],
+	      columns: [],
+	      columnsData: [
+	        {
+	          title: "序号",
+	          dataIndex: "number",
+	          align: "center",
+	          customRender: (text, record, index) => `${index + 1}`,
+	          width: 80,
+	          fixed: 'left'
+	        },
+	        {
+	          title: "标名",
+	          dataIndex: "tenderName",
+	          // width: 100
+	        },
+	        {
+	          title: "包名",
+	          dataIndex: "contractName",
+	          // width: 100,
+	        },
+	        {
+	          title: "采购文件",
+	          dataIndex: "2",
+	          width: 160,
+	          align: 'center'
+	        },
+	        {
+	          title: "费用",
+	          dataIndex: "bondMoney",
+	          width: 100,
+	          align: 'right'
+	        },
+	        {
+	          title: "付款方式",
+	          dataIndex: "payMode",
+	          width: 100,
+	          align: 'center',
+	          scopedSlots: { customRender: "payMode" }
+	        },
+	        {
+	          title: "付款状态",
+	          dataIndex: "operationState",
+	          width: 120,
+	          align: 'center',
+	          scopedSlots: { customRender: "operationState" }
+	        },
+	        {
+	          title: "付款时间",
+	          dataIndex: "payTime",
+	          width: 160,
+	          align: 'center'
+	        },
+	        {
+	          title: "付款凭证",
+	          dataIndex: "paymentVoucher",
+	          width: 130,
+	          align: 'center',
+	          scopedSlots: { customRender: "paymentVoucher" },
+	        },
+	        {
+	          title: "操作",
+	          align: "center",
+	          scopedSlots: { customRender: "action" },
+	          width: 230,
+	          fixed: 'right'
+	        }
+	      ]
+			}
+		},
+		created() {
+			this.fnInit();
+		},
+		computed: {
+			...mapGetters("account", ["dictionary", "user"]),
+			projectId() {
+				return this.$route.params.id
+			}
+		},
+		methods: {
+			fnInit() {
+				//详情界面不展示操作列
+	      this.columns = [];
+	      let arr = [...this.columnsData],
+	        index = this.columnsData.length - 1;
+	      if (this.pageType == 0) {
+	        arr.splice(index, 1);
+	      }
+	      this.columns = [...arr];
+	      this.fnGetData();
+			},
+			fnGetData(type) {
+				let param = {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          projectId: this.projectId
+        }
+	      this.pageData.loading = true;
+	      getPurchaseFilesList(param).then(res => {
+	        const resData = res.data || {};
+	        const responseResult = resData.responseResult || {};
+	        if (resData.errCode == "0000") {
+	          const { data, total } = responseResult;
+	          this.dataSource = data;
+	          this.pageData.total = Number(total);
+	          if (type == 'refresh') {
+	          	this.$message.success('刷新成功', 3);
+	          }
+	        } else {
+	         this.$error({
+	            title: "错误提示",
+	            content: this.BASE.handleErrorMsg(resData)
+	          });
+	        }
+	        this.pageData.loading = false;
+	      });
+			},
+			fnFresh() {
+				this.fnGetData('refresh');
+			},
+			handleAction(data, type) {
+				let param = {};
+				switch(type) {
+					//线上付款
+					case 0: 
+						param = {
+							cancelFlag: false,
+							payBussId: data.replyFileId,
+							payBussType: 1
+						}
+						purchaseFilesPay(param).then(res => {
+	            const resData = res.data || {};
+	            if (resData.errCode == "0000") {
+	              this.$message.success(resData.responseResult.payReturnMsg, 3);
+	              this.fnGetData();
+	            } else {
+	              this.$error({
+	                title: "错误提示",
+	                content: this.BASE.handleErrorMsg(resData)
+	              });
+	            }
+	          });
+						break;
+					//线下付款
+					case 1: 
+						param = {
+							cancelFlag: false,
+							payBussId: data.replyFileId,
+							payBussType: 2
+						}
+						purchaseFilesPay(param).then(res => {
+	            const resData = res.data || {};
+	            if (resData.errCode == "0000") {
+	              this.$message.success(resData.responseResult.payReturnMsg, 3);
+	              this.fnGetData();
+	            } else {
+	              this.$error({
+	                title: "错误提示",
+	                content: this.BASE.handleErrorMsg(resData)
+	              });
+	            }
+	          });
+						break;
+					//取消付款
+					case 2: 
+						param = {
+							cancelFlag: true,
+							payBussId: data.replyFileId,
+							payBussType: 1
+						}
+						purchaseFilesPay(param).then(res => {
+	            const resData = res.data || {};
+	            if (resData.errCode == "0000") {
+	              this.$message.success(resData.responseResult.payReturnMsg, 3);
+	              this.fnGetData();
+	            } else {
+	              this.$error({
+	                title: "错误提示",
+	                content: this.BASE.handleErrorMsg(resData)
+	              });
+	            }
+	          });
+						break;
+					case 3: 
+						this.$message.info("此功能暂不支持");
+						break;
+					case 4: 
+						this.$message.info("此功能暂不支持");
+						break;
+				}
+			},
+			sizeChange(page, pageSize) {
+	      this.pageData.page = page;
+	      this.pageData.limit = pageSize;
+	      this.fnGetData();
+	    },
+	    pageChange(current, size) {
+	      this.pageData.page = current;
+	      this.pageData.limit = size;
+	      this.fnGetData();
+	    }
+		}
+	}
+</script>

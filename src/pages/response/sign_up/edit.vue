@@ -1,0 +1,130 @@
+<template>
+  <div class="sign-up-edit-wrapper">
+    <project-info
+      id="项目信息"
+      url="/bid/prepare/detail"
+      purchaseTypeKey="purchaseTypeAll"
+      :projectData="projectData"
+    >
+    </project-info>
+    <contact-info
+      id="联系人信息"
+      :pageType="1"
+      :baseData="baseData"
+      @update-base-info="fnUpdateBaseInfo"
+    >
+    </contact-info>
+    <!-- 审批操作 -->
+    <audit-button v-if="baseData.providerEnrollId">
+      <!-- 当‘采购方式’为‘邀请XX’时，系统才展示本按钮 -->
+      <a-button
+        v-if="
+          projectData.purchaseType == 2 ||
+            projectData.purchaseType == 4 ||
+            projectData.purchaseType == 6 ||
+            projectData.purchaseType == 8
+        "
+        type="primary"
+        @click="fnCheckInvitation"
+      >
+        查看邀请函
+      </a-button>
+      <a-popconfirm
+        :visible="isVisible"
+        :title="confirmTitle"
+        @cancel="fnCancel"
+        @confirm="fnConfirm"
+        @visibleChange="handleVisibleChange">
+        <a-button 
+          type="primary"
+          @click="fnJudgeCanbeSubmit">
+          提交报名
+        </a-button>
+      </a-popconfirm>
+    </audit-button>
+    <!-- 显示内容较少，暂不需要锚 -->
+    <!--  <Anchor :anchorList="anchorList"></Anchor> -->
+  </div>
+</template>
+
+<script>
+import { mixins } from "./mixins.js";
+import { submitSignUp } from "@/services/response";
+
+export default {
+  name: "sign-up-edit",
+  mixins: [mixins],
+  components: {
+    AuditButton: () => import("@/components/button/AuditButton")
+  },
+  data() {
+    return {
+      isVisible: false,
+      confirmTitle: ""
+    };
+  },
+  // watch: {
+  //   baseData: {
+  //     handler() {
+
+  //     },
+  //     deep: true
+  //   }
+  // },
+  methods: {
+    fnCheckInvitation() {
+      this.$router.push({
+        path: `/invitation-preview/${this.baseData.projectId}`,
+        query: {
+          isRequset: 1,
+          noticeType: 2,
+          formData:JSON.stringify({})
+        }
+      });
+    },
+    fnJudgeCanbeSubmit() {
+      let param = {
+        providerEnrollIds: this.baseData.providerEnrollId,
+        checkFlag: true
+      };
+      submitSignUp(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.confirmTitle = '确定提交报名';
+        } else {
+          this.confirmTitle = resData.customMess;
+        }
+        this.isVisible = true;
+      });
+    },
+    fnCancel() {
+      this.isVisible = false;
+    },
+    handleVisibleChange(visible) {
+      if (!visible) {
+        this.isVisible = false;
+        return;
+      }
+    },
+    fnConfirm() {
+      let param = {
+        providerEnrollIds: this.baseData.providerEnrollId,
+        checkFlag: false
+      };
+      submitSignUp(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.$message.success(resData.responseResult, 3);
+          //完成后跳转到查询界面
+          this.$closePage(this.$route.fullPath);
+          this.$router.push({ path: `/response/sign-up` });
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    }
+  }
+};
+</script>

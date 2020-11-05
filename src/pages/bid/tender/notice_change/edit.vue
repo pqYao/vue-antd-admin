@@ -1,0 +1,297 @@
+<template>
+  <a-card class="notice-change-edit-wrapper">
+    <Heading name="公告变更">
+      <a-button type="primary" @click="fnCheckChangeRecord">变更记录</a-button>
+    </Heading>
+    <a-form
+      layout="horizontal"
+      :form="form"
+      class="es-form es-form-bk"
+      @keydown.native.enter.prevent="fnSignAndSave"
+    >
+      <a-row>
+        <a-col :md="16" :sm="24">
+          <a-form-item label="公告标题" v-bind="BASE.twoItemLayout">
+            <a-input
+              disabled
+              v-decorator="[
+                `noticeTitle`,
+                {
+                  maxLength: 50,
+                  initialValue: formData.noticeTitle,
+                  validateTrigger: ['blur'],
+                  rules: [{ required: true, message: '请输入标题' }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="标书售卖开始时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              showTime
+              disabled
+              style="width:100%;"
+              format="YYYY-MM-DD  HH:mm:ss"
+              v-decorator="[
+                'bidSaletimeStart',
+                {
+                  rules: [
+                    { required: true, message: '请选择标书售卖开始时间' }
+                  ],
+                  initialValue: formData.bidSaletimeStart
+                }
+              ]"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="标书售卖截止时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              showTime
+              style="width:100%;"
+              @change="bidSaletimeEndChange"
+              :disabledDate="disabledBidSaletimeEnd"
+              format="YYYY-MM-DD  HH:mm:ss"
+              v-decorator="[
+                'bidSaletimeEnd',
+                {
+                  rules: [
+                    { required: true, message: '请选择标书售卖截止时间' }
+                  ],
+                  initialValue: formData.bidSaletimeEnd
+                }
+              ]"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="投标截止时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              showTime
+              :disabledDate="disabledTenderOffTime"
+              @change="tenderOffTimeChange"
+              style="width:100%;"
+              format="YYYY-MM-DD  HH:mm:ss"
+              v-decorator="[
+                'tenderOffTime',
+                {
+                  rules: [{ required: true, message: '请选择投标截止时间' }],
+                  initialValue: formData.tenderOffTime
+                }
+              ]"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="内容" v-bind="BASE.threeItemLayout">
+            <tinymce
+              v-if="tinymceRefresh"
+              v-model="formData.noticeContent"
+              :height="300"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+    <!-- 审批操作 -->
+    <audit-button>
+      <a-button type="primary" @click="fnView">
+        预览
+      </a-button>
+      <!-- 当项目未启用电子签名功能时显示 -->
+      <a-button type="primary" @click="fnSignAndSave">
+        保存
+      </a-button>
+      <!-- 当项目启用电子签名功能时显示，先校验填写信息再调用电子签名功能，签名完成后保存公告信息 -->
+      <!-- <a-button 
+        type="primary"
+        @click="fnSignAndSave">
+       	签字并保存
+      </a-button> -->
+      <!-- 当变更公告存在审批时，显示【提交审批】按钮， -->
+      <a-button type="primary" @click="fnSubmitChange">
+        提交审批
+      </a-button>
+      <!-- 当变更公告不存在审批时，显示【确认变更】按钮 -->
+      <a-button 
+        type="primary"
+        @click="fnSubmitChange">
+        确认变更
+      </a-button>
+    </audit-button>
+    <!-- 弹框查看公告变更记录 -->
+    <a-modal
+      v-if="changeRecordVisible"
+      v-model="changeRecordVisible"
+      title="变更记录"
+      width="80%"
+      :footer="null"
+      :centered="true"
+      :maskClosable="false"
+    >
+      <notice-change-record ref="linkman" @close-modal="fnCloseModal">
+      </notice-change-record>
+    </a-modal>
+  </a-card>
+</template>
+
+<script>
+import moment from "moment";
+import {
+  getNoticeChangeDetail,
+  signAndSaveNoticeChange,
+  submitNoticeChange
+} from "@/services/bid";
+
+export default {
+  name: "notice-change-edit",
+  components: {
+    Tinymce: () => import("@/components/Tinymce"),
+    Heading: () => import("@/components/heading/Heading"),
+    AuditButton: () => import("@/components/button/AuditButton"),
+    NoticeChangeRecord: () => import("@/components/table/ChangeRecord.vue")
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      changeRecordVisible: false,
+      tinymceRefresh: false
+    };
+  },
+  created() {
+    this.fnGetDetailInfo();
+  },
+  activated() {
+    this.fnGetDetailInfo();
+  },
+  computed: {
+    projectId() {
+      return this.$route.params.id;
+    },
+    noticeChangeId() {
+      return this.$route.query.ncid;
+    }
+  },
+  methods: {
+    moment,
+    //获取公告的详细数据
+    fnGetDetailInfo() {
+      let param = {
+        projectId: this.projectId,
+        noticeChangeId: this.noticeChangeId
+      };
+      getNoticeChangeDetail(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.formData = resData.responseResult || {};
+          this.tinymceRefresh = false;
+          this.$nextTick(() => {
+            this.tinymceRefresh = true;
+          });
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    //保存公告修改
+    fnSignAndSave() {
+      this.form.validateFieldsAndScroll(
+        this.BASE.formScrollOptions,
+        (error, values) => {
+          if (error) {
+            return;
+          }
+          for (let i in values) {
+            if (i.indexOf("time") == -1 && i.indexOf("Time") == -1) {
+              this.formData[i] = values[i];
+            }
+          }
+          this.formData.projectId = this.projectId;
+          signAndSaveNoticeChange(this.formData).then(res => {
+            const resData = res.data;
+            if (resData.errCode == "0000") {
+              this.fnGetDetailInfo();
+              if (!this.noticeChangeId) {
+                this.$router.push({
+                  query: { ncid: resData.responseResult }
+                });
+              }
+              this.$message.success("操作成功！", 3);
+            } else {
+              this.$error({
+                content: this.BASE.handleErrorMsg(resData)
+              });
+            }
+          });
+        }
+      );
+    },
+    //提交公告变更
+    fnSubmitChange() {
+      submitNoticeChange(this.formData.noticeChangeId).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.$message.success(resData.responseResult, 3);
+          //完成后跳转到查询界面
+          this.$closePage(this.$route.fullPath);
+          this.$router.push({ path: `/bid/tender/notice-change` });
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    //预览
+    fnView() {
+      this.formData.noticeContext = this.formData.noticeContent;
+      this.$router.push({
+        path: `/notice-preview/${this.formData.projectId}`,
+        query: {
+          formData: JSON.stringify(this.formData)
+        }
+      });
+    },
+      // 时间选择
+    tenderOffTimeChange(value, dateString) {
+      this.formData.tenderOffTime = dateString;
+      this.$set(this.formData, "tenderOffTime", dateString);
+    },
+    bidSaletimeEndChange(value, dateString) {
+      this.formData.bidSaletimeEnd = dateString;
+      this.$set(this.formData, "bidSaletimeEnd", dateString);
+    },
+    // 截止时间选择范围
+    disabledBidSaletimeEnd(current) {
+      return (
+        current &&
+        current < moment(this.formData.bidingDocSaleStart).endOf("String")
+      );
+    },
+    // 投标截止时间选择范围
+    disabledTenderOffTime(current) {
+      return (
+        current &&
+        current < moment(this.formData.bidSaletimeEnd).endOf("String")
+      );
+    },
+    //查看变更记录
+    fnCheckChangeRecord() {
+      this.changeRecordVisible = true;
+    },
+    fnCloseModal() {
+      this.changeRecordVisible = false;
+    }
+  }
+};
+</script>

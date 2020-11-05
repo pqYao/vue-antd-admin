@@ -1,0 +1,57 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="项目信息"></Heading>
+      <a-descriptions>
+        <a-descriptions-item label="项目编号">
+          {{ this.projectCode }}
+        </a-descriptions-item>
+        <a-descriptions-item label="项目名称">
+          {{ this.projectName }}
+        </a-descriptions-item>
+        <a-descriptions-item label="是否委托"> {{}} </a-descriptions-item>
+      </a-descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+// import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import { findSubTenderForProjectById } from "@/services/bid";
+
+export default {
+  components: { Heading },
+  data() {
+    return {
+      projectCode: "",
+      projectName: ""
+    };
+  },
+  created() {
+    this.getProjectById();
+  },
+  methods: {
+    getProjectById() {
+      console.log(this.$route.params);
+      findSubTenderForProjectById(this.$route.params.id).then(res => {
+        console.log(111);
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { projectCode, projectName } = resData.responseResult;
+          this.projectCode = projectCode;
+          this.projectName = projectName;
+        } else {
+          this.$error({
+            content: resData.customMess
+          });
+        }
+      });
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.ant-descriptions {
+  margin-top: 15px;
+}
+</style>

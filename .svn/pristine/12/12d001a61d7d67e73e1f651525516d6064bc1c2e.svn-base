@@ -1,0 +1,77 @@
+<template>
+  <a-card class="entrust-base-edit">
+    <Heading name="基本信息"> </Heading>
+    <div class="entrust-base-edit-wrapper">
+      <div class="title">{{ formData.agencyOrgName }}代理公司：</div>
+      <div>
+        我司的{{
+          formData.projectName
+        }}项目拟采用公开招标方式，经研究，现委托贵司作为本项目的招标代理机构。
+      </div>
+      <div v-html="formData.content"></div>
+      <div>
+        本委托函自我司发出之日起生效，至本项目全部招标代理工作完成之日终止。
+      </div>
+      <div style="text-align:right">招标人：{{ formData.tenderee }}</div>
+      <div style="text-align:right">
+        {{ BASE.DeleteTime(formData.operationFinishDate) }}
+      </div>
+    </div>
+  </a-card>
+</template>
+<script>
+import Heading from "@/components/heading/Heading";
+import { findEntrust } from "@/services/bid";
+export default {
+  name: "entrust-base-view",
+  components: { Heading },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      projectId: "",
+      isConnect: false
+    };
+  },
+  created() {
+    this.handleInit();
+  },
+  activated() {
+    this.handleInit();
+  },
+  methods: {
+    handleInit() {
+      this.projectId = this.$route.params.id;
+      this.handleGetData();
+    },
+    handleGetData() {
+      findEntrust(this.projectId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.entrust-base-edit-wrapper {
+  padding: 20px 30px;
+  background: #f3f8ff;
+  div {
+    padding: 0 20px;
+    font-size: 14px;
+    line-height: 30px;
+  }
+  .title {
+    padding: 0;
+  }
+}
+</style>

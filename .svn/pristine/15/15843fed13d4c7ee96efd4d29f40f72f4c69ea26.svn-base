@@ -1,0 +1,254 @@
+<template>
+	<div class="file-table-wrapper">
+		<a-card>
+      <Heading :name="tableName">
+      	<template v-slot:leftIcon>
+      		<a-popover>
+						<template slot="content">
+				      <p>系统支持mht/rar/zip格式的附件上传，最大不能超30M。</p>
+				    </template>
+      			<a-icon type="question-circle" />
+      		</a-popover>
+      	</template>
+      	<div v-if="pageType == 1">
+      		<a-button type="primary" @click="fnUpload" >
+	          <i :class="['iconfont', 'icon-baocun']"></i>
+	          上传
+	        </a-button>
+	        <a-button type="primary" @click="fnDelete">
+	          <i :class="['iconfont', 'icon-weibiaoti544']"></i>
+	          删除
+	        </a-button>
+      	</div>
+      </Heading>
+      <a-table
+        bordered
+        size="small"
+        class="es-table"
+        rowKey="subtenderId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }">
+    		<!-- 付款凭证 -->
+        <template slot="paymentVoucher" slot-scope="text">
+        	<a>{{text}}</a>
+        </template>
+        <template slot="action" slot-scope="text, record" v-if="pageType == 1">
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 0)">
+            线上付款
+          </a>
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 1)">
+            线下付款
+          </a>
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 2)">
+            取消付款
+          </a>
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 2)">
+            下载采购文件
+          </a>
+          <a
+            style="margin-right: 8px"
+            @click="handleAction(record.projectId, 3)">
+            上传付款凭证
+          </a>
+        </template>
+      </a-table>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+	</div>
+</template>
+<script>
+	import { getPurchaseFilesList } from "@/services/response";
+	export default {
+		name: "file-table",
+		components: {
+			Heading: () => import("@/components/heading/Heading"),
+			pagination: () => import("@/components/pagination/Pagination"),
+		},
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			},
+			tableName: {
+				type: String,
+				default: ''
+			}
+		},
+		data() {
+			return {
+	      pageData: {
+	        limit: 15,
+	        total: 0,
+	        page: 1,
+	        loading: false
+	      },
+	      dataSource: [],
+	      columns: [],
+	      columnsData: [
+	        {
+	          title: "序号",
+	          dataIndex: "number",
+	          align: "center",
+	          customRender: (text, record, index) => `${index + 1}`,
+	          width: 80
+	        },
+	        {
+	          title: "标名",
+	          dataIndex: "subtenderName",
+	          width: 100
+	        },
+	        {
+	          title: "包名",
+	          dataIndex: "1",
+	          width: 100,
+	        },
+	        {
+	          title: "采购文件",
+	          dataIndex: "2",
+	          width: 160,
+	          align: 'center'
+	        },
+	        {
+	          title: "费用",
+	          dataIndex: "3",
+	          width: 140,
+	          align: 'right'
+	        },
+	        {
+	          title: "付款方式",
+	          dataIndex: "33",
+	          width: 100,
+	          align: 'center'
+	        },
+	        {
+	          title: "付款状态",
+	          dataIndex: "44",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "付款时间",
+	          dataIndex: "4411",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "付款凭证",
+	          dataIndex: "paymentVoucher",
+	          width: 130,
+	          align: 'center',
+	          scopedSlots: { customRender: "paymentVoucher" },
+	        },
+	        {
+	          title: "操作",
+	          align: "center",
+	          scopedSlots: { customRender: "action" },
+	          width: 80
+	        }
+	      ]
+			}
+		},
+		created() {
+			this.fnInit();
+		},
+		computed: {
+			projectId() {
+				return this.$route.params.id
+			}
+		},
+		methods: {
+			fnInit() {
+				//详情界面不展示操作列
+	      this.columns = [];
+	      let arr = [...this.columnsData],
+	        index = this.columnsData.length - 1;
+	      if (this.pageType == 0) {
+	        arr.splice(index, 1);
+	      }
+	      this.columns = [...arr];
+			},
+			fnGetData(type) {
+				let param = {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        }
+	      this.pageData.loading = true;
+	      getPurchaseFilesList(param).then(res => {
+	        const resData = res.data || {};
+	        const responseResult = resData.responseResult || {};
+	        if (resData.errCode == "0000") {
+	          const { data, total } = responseResult;
+	          this.dataSource = data;
+	          this.pageData.total = Number(total);
+	          if (type == 'refresh') {
+	          	this.$message.success('刷新成功', 3);
+	          }
+	        } else {
+	         this.$error({
+	            title: "错误提示",
+	            content: this.BASE.handleErrorMsg(resData)
+	          });
+	        }
+	        this.pageData.loading = false;
+	      });
+			},
+			fnFresh() {
+				this.fnGetData('refresh');
+			},
+			handleAction(data, type) {
+				switch(type) {
+					case 0: 
+						console.log(data);
+						break;
+					case 1: 
+						console.log(data);
+						break;
+					case 2: 
+						console.log(data);
+						break;
+					case 3: 
+						console.log(data);
+						break;
+				}
+			},
+			fnUpload() {
+
+			},
+			fnDelete() {
+				
+			},
+			sizeChange(page, pageSize) {
+	      this.pageData.page = page;
+	      this.pageData.limit = pageSize;
+	      this.fnGetData();
+	    },
+	    pageChange(current, size) {
+	      this.pageData.page = current;
+	      this.pageData.limit = size;
+	      this.fnGetData();
+	    }
+		}
+	}
+</script>

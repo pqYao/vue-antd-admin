@@ -1,0 +1,80 @@
+<template>
+  <div class="sign-up-edit-wrapper">
+    <project-info 
+      id="项目信息"
+      url="/bid/prepare/detail" 
+      purchaseTypeKey="purchaseTypeAll"
+      :projectData="projectData">
+    </project-info>
+    <contact-info 
+      id="联系人信息"
+      :pageType=1
+      :baseData="baseData"
+      @update-base-info="fnUpdateBaseInfo">
+    </contact-info>
+    <!-- 审批操作 -->
+    <audit-button>
+      <!-- 当‘采购方式’为‘邀请XX’时，系统才展示本按钮 -->
+      <a-button 
+        v-if="baseData.purchaseType == 2 || 
+          baseData.purchaseType == 4 || 
+          baseData.purchaseType == 6 || 
+          baseData.purchaseType == 8"
+        type="primary" 
+        @click="fnCheckInvitation">
+        查看邀请函
+      </a-button>
+      <a-popconfirm
+        title="确定提交报名?"
+        @confirm="fnConfirm">
+        <a-button type="primary">
+          提交报名
+        </a-button>
+      </a-popconfirm>
+    </audit-button>
+    <!-- 显示内容较少，暂不需要锚 -->
+    <!--  <Anchor :anchorList="anchorList"></Anchor> -->
+  </div>
+</template>
+
+<script>
+import {mixins} from "./mixins.js";
+import { submitSignUp } from "@/services/response";
+
+export default {
+  name: 'sign-up-edit',
+  mixins: [mixins],
+  components: {
+    AuditButton: () => import("@/components/button/AuditButton")
+  },
+  data() {
+    return {
+    }
+  },
+  methods: {
+    fnCheckInvitation() {
+      this.$message.info("此功能正在开发中");
+      // this.$router.push({
+      //   path: `/invitation-preview/${this.projectData.projectId}`
+      // });
+    },
+    fnConfirm() {
+      let param = {
+        providerEnrollId: this.baseData.providerEnrollId
+      };
+      submitSignUp(this.baseData.providerEnrollId, param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.$message.success(resData.responseResult, 3);
+          //完成后跳转到查询界面
+          this.$router.push({path: `/response/sign-up`});
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    }
+  },
+};
+</script>

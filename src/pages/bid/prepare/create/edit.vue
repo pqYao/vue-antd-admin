@@ -1,0 +1,113 @@
+<template>
+  <div>
+    <span id="基本信息"> </span>
+    <BaseEdit @send-data="getData"></BaseEdit>
+    <!-- <file id="附件管理"></file> -->
+    <span id="项目情况说明"> </span>
+    <Explain :baseData="baseData"></Explain>
+    <span id="产品明细"> </span>
+    <Product :baseData="baseData"></Product>
+    <AuditButton v-if="!BASE.ObjectIsNull(baseData)">
+      <a-popconfirm
+        :visible="isCanbeFinish"
+        title="确定立项完成?"
+        @confirm="handleCompeleted(baseData.projectId)"
+        @cancel="fnCancel"
+        @visibleChange="handleVisibleChange"
+      >
+        <a-button @click="fnJudgeCanbeFinish()" type="primary">
+          立项完成
+        </a-button>
+      </a-popconfirm>
+      <a-button type="primary" @click="handleSubmit(baseData.projectId)">
+        提交审批
+      </a-button>
+    </AuditButton>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import BaseEdit from "./components/BaseEdit";
+// import file from "./components/file";
+import Product from "./components/Product";
+import Anchor from "@/components/anchor/Anchor";
+import Explain from "./components/Explain";
+import AuditButton from "@/components/button/AuditButton";
+import {
+  projectCompeleted,
+  projectSubmit,
+  validateProjectInfo
+} from "@/services/bid";
+
+export default {
+  components: { BaseEdit, Anchor, Explain, Product, AuditButton },
+  data() {
+    return {
+      anchorList: ["基本信息", "附件管理", "项目情况说明", "产品明细"],
+      baseData: {},
+      isCanbeFinish: false
+    };
+  },
+  watch: {
+    baseData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    getData(data) {
+      this.baseData = data;
+    },
+    fnJudgeCanbeFinish() {
+      validateProjectInfo(this.baseData.projectId || "").then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.isCanbeFinish = true;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    handleCompeleted(id) {
+      projectCompeleted(id).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.$closePage(this.$route.fullPath);
+        }
+      });
+    },
+    handleSubmit(id) {
+      projectSubmit(id).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.$closePage(this.$route.fullPath);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    fnCancel() {
+      this.isCanbeFinish = false;
+    },
+    handleVisibleChange(visible) {
+      if (!visible) {
+        this.isCanbeFinish = false;
+        return;
+      }
+    },
+  }
+};
+</script>

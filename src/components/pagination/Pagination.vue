@@ -1,0 +1,99 @@
+<template>
+  <a-pagination
+    class="my-pagination"
+    v-model="current"
+    :total="total"
+    :size="size"
+    :showTotal="(total, range) => `共 ${total} 条`"
+    :hideOnSinglePage="hideOnSinglePage"
+    :showQuickJumper="showQuickJumper"
+    :showSizeChanger="showSizeChanger"
+    :pageSize.sync="currentPageSize"
+    :pageSizeOptions="pageSizeOptions"
+    @change="change"
+    @showSizeChange="showSizeChange"
+  ></a-pagination>
+</template>
+
+<script>
+export default {
+  name: "my-pagination",
+  props: {
+    value: {
+      // 当前页
+      type: Number
+    },
+    // 只有一页时是否隐藏分页器
+    hideOnSinglePage: {
+      type: Boolean,
+      default: false
+    },
+    pageSize: {
+      type: Number,
+      default: 10
+    },
+    // 指定每页可以显示多少条
+    pageSizeOptions: {
+      type: Array,
+      default() {
+        return ["10", "15", "30", "50", "100", "200"];
+      }
+    },
+    // 是否可以快速跳转至某页
+    showQuickJumper: {
+      type: Boolean,
+      default: true
+    },
+    // 是否可以改变 pageSize
+    showSizeChanger: {
+      type: Boolean,
+      default: true
+    },
+    simple: {
+      type: Boolean,
+      default: false
+    },
+    size: {
+      type: String,
+      default: "small"
+    },
+    total: {
+      type: Number,
+      default: 1
+    }
+  },
+  data() {
+    return {
+      current: this.value,
+      // 每页条数
+      currentPageSize: this.pageSize
+    };
+  },
+  watch: {
+    value(val) {
+      this.current = val;
+    },
+    pageSize(val) {
+      this.currentPageSize = val;
+    }
+  },
+  methods: {
+    change(page, pageSize) {
+      this.$emit("input", page);
+      this.$emit("update:pageSize", pageSize);
+      this.$emit("change", page, pageSize);
+    },
+    showSizeChange(current, size) {
+      this.$emit("input", current);
+      this.$emit("update:pageSize", size);
+      this.$emit("showSizeChange", current, size);
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.my-pagination {
+  float: right;
+  margin: 16px 0;
+}
+</style>

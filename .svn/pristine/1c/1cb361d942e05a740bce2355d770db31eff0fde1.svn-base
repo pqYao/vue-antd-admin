@@ -1,0 +1,35 @@
+<template>
+  <div class="sign-up-detail-wrapper">
+    <project-info 
+      id="项目信息"
+      url="/bid/prepare/detail" 
+      purchaseTypeKey="purchaseType"
+      :projectData="projectData">
+    </project-info>
+    <contact-info 
+      id="联系人信息"
+      :pageType=0
+      :projectData="projectData">
+    </contact-info>
+    <!-- 显示内容较少，暂不需要锚 -->
+    <!-- <Anchor :anchorList="anchorList"></Anchor> -->
+  </div>
+</template>
+
+<script>
+import {mixins} from "./mixins.js";
+export default {
+  name: 'sign-up-detail',
+  mixins: [mixins],
+  data() {
+    return {}
+  },
+  created() {
+    this.fnGetProjectData();
+  },
+  activated() {
+    this.fnGetProjectData();
+  },
+  methods: {},
+};
+</script>

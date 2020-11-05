@@ -1,0 +1,273 @@
+<template>
+  <div class="select-product-for-divide-tender-wrapper">
+    <a-row type="flex">
+      <a-col :flex="1" class="dt-left-wrapper">
+        <a-card>
+          <Heading name="项目目录"></Heading>
+          <a-tree 
+            v-if="treeData.length"
+            show-line 
+            defaultExpandAll
+            :tree-data="treeData"
+            @select="onSelect"/>
+        </a-card>
+      </a-col>
+      <a-col :flex="4">
+        <div>
+          <!-- 查询条件 -->
+          <SearchForm
+            :searchList="searchList"
+            name="查询条件"
+            @on-filter="toSearch"
+          ></SearchForm>
+          <!-- 查询结果 -->
+          <a-card class="table-wrapper">
+            <a-table
+              size="small"
+              rowKey="businessKey"
+              :loading="pageData.loading"
+              :pagination="false"
+              :columns="columns"
+              :dataSource="dataSource"
+              :scroll="{ x: true}"
+              :rowSelection="{
+                fixed: true,
+                selectedRowKeys: selectedRowKeys,
+                onChange: onSelectChange
+              }">
+              <a slot="projectCode" slot-scope="text">{{ text }}</a>
+            </a-table>
+            <pagination
+              :value="pageData.page"
+              :pageSize="pageData.limit"
+              v-show="pageData.total > 0"
+              :total="pageData.total"
+              @change="sizeChange"
+              @showSizeChange="pageChange"
+            ></pagination>
+          </a-card>
+        </div>
+      </a-col>
+    </a-row>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { 
+  getProjectInfoTree,
+  getProductSelectedData,
+  getSelectedDataForDivideTender
+} from "@/services/bid";
+
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 80
+  },
+  {
+    title: "产品编码",
+    dataIndex: "productCode",
+    align: 'center'
+  },
+  {
+    title: "产品名称",
+    dataIndex: "productName"
+  },
+  {
+    title: "产品单位",
+    dataIndex: "measure",
+    align: 'center'
+  },
+  {
+    title: "总数量",
+    dataIndex: "totalAmount",
+    align: 'center'
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "产品名称",
+    key: "productName"
+  },
+  {
+    type: "input",
+    label: "产品编码",
+    key: "productCode"
+  }
+];
+
+export default {
+  name: "select-product-for-divide-tender",
+  components: { SearchForm, Pagination, Heading },
+  props: {
+    param: {
+      type: Object,
+      default () {
+        return {}
+      }
+    }
+  },
+  data() {
+    return {
+      treeData: [],
+      selectedKeys: [],
+      subtenderId: "",
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      filter: {},
+      pageData: {
+        limit: 15,
+        total: 0,
+        page: 1,
+        loading: false
+      }
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  watch: {
+    treeData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  created() {
+    this.init();
+  },
+  methods: {
+    init() {
+      //获取已选的产品数据
+      this.findIds();
+      this.findTree();
+      //this.getData();
+    },
+    findTree() {
+      let param = {
+        projectId: this.param.projectId
+      }
+      getProjectInfoTree(param).then(res => {
+        const resData = res.data || {};
+        const resResult = resData.responseResult || {};
+        if (resData.errCode == "0000") {
+          this.treeData = [resResult];
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    findIds() {
+      let param = {
+        projectId: this.param.projectId
+      }
+      getSelectedDataForDivideTender(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.selectedRowKeys = responseResult;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    getData() {
+      this.subtenderId = this.selectedKeys.length != 0 ? this.selectedKeys[0] : '';
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          subtenderId: this.subtenderId,
+          projectId: this.param.projectId
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      getProductSelectedData(param).then(res => {
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          if (this.dataSource.length != 0) {
+            this.dataSource.forEach((ele) => {
+              ele.projectId = this.param.projectId;
+              ele.subtenderId = this.subtenderId;
+            })
+          }
+          //将已选中的产品勾上
+          //this.selectedRowKeys = responseResult.selectedProd;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    toSearch(data) {
+      this.filter = data;
+      this.getData();
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    },
+    onSelect(selectedKeys) {
+      this.selectedKeys = selectedKeys;
+      this.pageData.page = 1,
+      this.getData();
+    },
+    getRes() {
+      let obj = {
+        subtenderId: this.subtenderId,
+        selectedRowKeys: this.selectedRowKeys,
+        selectedRows: this.selectedRows
+      }
+      return obj;
+    }
+  }
+};
+</script>

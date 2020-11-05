@@ -1,0 +1,320 @@
+import TabsView from "@/layouts/tabs/TabsView";
+import BlankView from "@/layouts/BlankView";
+import PageView from "@/layouts/PageView";
+
+// 路由配置
+const options = {
+  routes: [
+    {
+      path: "/login",
+      name: "登录页",
+      component: () => import("@/pages/login")
+    },
+    {
+      path: "*",
+      name: "404",
+      component: () => import("@/pages/exception/404")
+    },
+    {
+      path: "/403",
+      name: "403",
+      component: () => import("@/pages/exception/403")
+    },
+    {
+      path: "/",
+      name: "首页",
+      component: TabsView,
+      redirect: "/login",
+      children: [
+        {
+          path: "workplace",
+          name: "工作台",
+          meta: {
+            icon: "icon-gongzuotai"
+          },
+          component: PageView,
+          children: [
+            {
+              path: "todo",
+              name: "待办",
+              meta: {
+                icon: "file-ppt"
+              },
+              component: () => import("@/pages/demo")
+            }
+          ]
+        },
+        {
+          path: "bid",
+          name: "招标采购",
+          meta: {
+            icon: "icon-icon-bid-archive"
+          },
+          component: BlankView,
+          children: [
+            {
+              path: "prepare",
+              name: "招标准备",
+              meta: {
+                icon: ""
+              },
+              component: PageView,
+              children: [
+                {
+                  path: "create",
+                  name: "创建采购项目",
+                  component: () => import("@/pages/bid/prepare/create/index")
+                },
+                {
+                  path: "add",
+                  name: "新增采购项目",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/create/add")
+                },
+                {
+                  path: "detail/:id",
+                  name: "采购项目详情",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/create/detail")
+                },
+                {
+                  path: "edit/:id",
+                  name: "采购项目编辑",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/create/edit")
+                },
+                {
+                  path: "divide-tender",
+                  name: "分标",
+                  component: () => import("@/pages/bid/prepare/divide_tender/index")
+                },
+                {
+                  path: "divide-tender-edit/:id",
+                  name: "分标编辑",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/divide_tender/edit")
+                },
+                {
+                  path: "divide-tender-detail/:id",
+                  name: "分标查看",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/divide_tender/detail")
+                },
+                {
+                  path: "sub-contract",
+                  name: "分包",
+                  component: () => import("@/pages/bid/prepare/sub_contract/index")
+                },
+                {
+                  path: "sub-contract-detail/:id",
+                  name: "分包编辑",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/sub_contract/edit")
+                },
+                {
+                  path: "sub-contract-edit/:id",
+                  name: "分包查看",
+                  meta: {
+                    invisible: true
+                  },
+                  component: () => import("@/pages/bid/prepare/sub_contract/edit")
+                }
+              ]
+            },
+            {
+              path: "zbzb1",
+              name: "招标准备1",
+              meta: {
+                icon: ""
+              },
+              component: PageView,
+              children: [
+                {
+                  path: "cjcgxm1",
+                  name: "创建采购项目1",
+                  component: () => import("@/pages/demo")
+                },
+                {
+                  path: "fbiao1",
+                  name: "分标1",
+                  component: () => import("@/pages/demo")
+                },
+                {
+                  path: "fbao1",
+                  name: "分包1",
+                  component: () => import("@/pages/demo")
+                }
+              ]
+            }
+          ]
+        },
+        {
+          path: "parent2",
+          name: "其他采购",
+          meta: {
+            icon: "icon-caigoudingdan"
+          },
+          component: PageView,
+          children: [
+            {
+              path: "demo2",
+              name: "演示页面2",
+              component: () => import("@/pages/demo")
+            }
+          ]
+        },
+        {
+          path: "sxf",
+          name: "比选采购",
+          meta: {
+            icon: "icon-gouwuchekong"
+          },
+          component: BlankView,
+          children: [
+            {
+              path: "404",
+              name: "Exp404",
+              component: () => import("@/pages/exception/404")
+            },
+            {
+              path: "403",
+              name: "Exp403",
+              component: () => import("@/pages/exception/403")
+            },
+            {
+              path: "500",
+              name: "Exp500",
+              component: () => import("@/pages/exception/500")
+            }
+          ]
+        },
+        {
+          path: "vds",
+          name: "专家管理",
+          meta: {
+            icon: "icon-renyuanguanli"
+          },
+          component: BlankView,
+          children: [
+            {
+              path: "404",
+              name: "Exp404",
+              component: () => import("@/pages/exception/404")
+            },
+            {
+              path: "403",
+              name: "Exp403",
+              component: () => import("@/pages/exception/403")
+            },
+            {
+              path: "500",
+              name: "Exp500",
+              component: () => import("@/pages/exception/500")
+            }
+          ]
+        },
+        {
+          path: "xvv",
+          name: "供应商管理",
+          meta: {
+            icon: "icon-ic_manage_assignprop"
+          },
+          component: BlankView,
+          children: [
+            {
+              path: "404",
+              name: "Exp404",
+              component: () => import("@/pages/exception/404")
+            },
+            {
+              path: "403",
+              name: "Exp403",
+              component: () => import("@/pages/exception/403")
+            },
+            {
+              path: "500",
+              name: "Exp500",
+              component: () => import("@/pages/exception/500")
+            }
+          ]
+        },
+        {
+          path: "sdc",
+          name: "基础数据管理",
+          meta: {
+            icon: "icon-shujuguanli"
+          },
+          component: BlankView,
+          children: [
+            {
+              path: "404",
+              name: "Exp404",
+              component: () => import("@/pages/exception/404")
+            },
+            {
+              path: "403",
+              name: "Exp403",
+              component: () => import("@/pages/exception/403")
+            },
+            {
+              path: "500",
+              name: "Exp500",
+              component: () => import("@/pages/exception/500")
+            }
+          ]
+        },
+        {
+          path: "er",
+          name: "统计分析",
+          meta: {
+            icon: "icon-tongjitu"
+          },
+          component: BlankView,
+          children: [
+            {
+              path: "404",
+              name: "Exp404",
+              component: () => import("@/pages/exception/404")
+            },
+            {
+              path: "403",
+              name: "Exp403",
+              component: () => import("@/pages/exception/403")
+            },
+            {
+              path: "500",
+              name: "Exp500",
+              component: () => import("@/pages/exception/500")
+            }
+          ]
+        },
+        {
+          name: "验权页面",
+          path: "auth/demo",
+          meta: {
+            icon: "file-ppt",
+            authority: {
+              permission: "form",
+              role: "manager"
+            },
+            component: () => import("@/pages/demo")
+          }
+        }
+      ]
+    }
+  ]
+};
+
+export default options;

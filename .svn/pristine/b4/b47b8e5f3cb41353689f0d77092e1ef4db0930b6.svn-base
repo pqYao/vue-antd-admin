@@ -1,0 +1,121 @@
+<template>
+  <div
+    class="anchor-demo-custom"
+    @mouseover="mouseOver"
+    @mouseleave="mouseLeave"
+    ref="wrapper"
+  >
+    <div class="anchor-btn" v-if="isShow">
+      <a-icon type="right" />
+      <a-icon type="right" style="margin-left:-4px" />
+    </div>
+    <div class="anchor-btn" v-else>
+      <a-icon type="left" />
+      <a-icon type="left" style="margin-left:-4px" />
+    </div>
+    <a-anchor
+      ref="demo"
+      v-show="isShow"
+      :targetOffset="200"
+      @click="handleClickFun"
+      @change="onChange"
+    >
+      <span v-for="(item, i) in anchorList" :key="i">
+        <a-anchor-link :href="`#${item}`" ref="span">
+          <template slot="title">
+            <i :class="['iconfont', 'icon-yuanxing']"></i>
+            {{ item }}
+          </template>
+        </a-anchor-link>
+      </span>
+      <div></div>
+    </a-anchor>
+  </div>
+</template>
+<script>
+export default {
+  props: {
+    anchorList: {
+      type: Array,
+      required: false
+    }
+  },
+  data() {
+    return { isShow: false };
+  },
+  methods: {
+    handleClickFun(e, link) {
+      e.preventDefault();
+      if (link.href) {
+        // 找到锚点对应得的节点
+        let element = document.getElementById(link.href);
+        // 如果对应id的锚点存在，就跳滚动到锚点顶部
+        element &&
+          element.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+    },
+    // 移入
+    mouseOver() {
+      this.$refs.wrapper.style.marginTop =
+        -((this.anchorList.length * 33 + 40) / 2) + "px";
+      this.$nextTick(() => {
+        this.isShow = true;
+      });
+    },
+    // 移出
+    mouseLeave() {
+      this.isShow = false;
+    },
+    onChange() {
+      // console.log("Anchor:OnChange", link);
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.anchor-demo-custom {
+  position: fixed;
+  top: 50%;
+  right: 0px;
+  width: 170px;
+  margin-top: -20px;
+  box-shadow: -6px 0px 8px @shadow-color;
+  z-index: 100
+}
+.anchor-btn {
+  width: 36px;
+  height: 36px;
+  position: fixed;
+  right: 10px;
+  background: #007bff;
+  top: 50%;
+  margin-top: -18px;
+  border-radius: 50%;
+  z-index: 10;
+  line-height: 36px;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0px 0px 6px #007bff;
+  font-size: 10px
+}
+/deep/.ant-anchor-link {
+  padding: 8px 0 8px 10px;
+}
+/deep/.ant-anchor-ink {
+  display: none;
+}
+/deep/.ant-anchor-link-active .icon-yuanxing:before {
+  content: "\e63b";
+}
+/deep/.icon-yuanxing {
+  font-size: 10px;
+  margin: 0;
+}
+/deep/.ant-anchor-link-active .icon-yuanxing {
+  font-size: 15px;
+  margin-left: -2px;
+}
+/deep/.ant-anchor-wrapper {
+  padding: 20px 10px;
+}
+</style>

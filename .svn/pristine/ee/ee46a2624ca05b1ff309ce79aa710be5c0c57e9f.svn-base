@@ -1,0 +1,196 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="产品明细"></Heading>
+      <div class="table-operations" v-show="!isView">
+        <a-button type="primary"> 关联产品 </a-button>
+        <a-popconfirm title="确定批量删除?" @confirm="() => selectDelete">
+          <a-button type="primary"> 删除 </a-button>
+        </a-popconfirm>
+        <a-button type="primary"> 保存 </a-button>
+      </div>
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange,
+        }"
+        :scroll="{ x: true }"
+        rowKey="productId"
+      >
+        <a slot="subtenderName" slot-scope="text">
+          {{ text }}
+        </a>
+        <a slot="productCode" slot-scope="text">
+          {{ text }}
+        </a>
+        <a slot="productName" slot-scope="text">
+          {{ text }}
+        </a>
+        <a slot="buyType" slot-scope="text">
+          {{ text }}
+        </a>
+        <a slot="totalNum" slot-scope="text">
+          {{ text }}
+        </a>
+        <a slot="requirementAmout" slot-scope="text, record">
+          <editable-cell v-show="!isView"
+            :text="text"
+            :dataSource="dataSource"
+            @change="onCellChange(record.key, 'subtenderName', $event)"
+          >
+            {{ text }}
+          </editable-cell>
+        </a>
+        <template slot="action" slot-scope="record" v-if="!isView">
+          <a-popconfirm title="确定删除?" @confirm="() => onDelete(record.productId)">
+            <a href="javascript:;">删除</a>
+          </a-popconfirm>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0 && !isView"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import EditableCell from "@/components/cell/EditableCell";
+import  pagination  from "@/components/pagination/Pagination";
+
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) => `${index + 1}`,
+    width: 100,
+  },
+  {
+    title: "标名",
+    dataIndex: "subtenderName",
+    // width: 180,
+    align: "center",
+    // editable:true,
+    scopedSlots: { customRender: "subtenderName" },
+  },
+  {
+    title: "产品编码",
+    dataIndex: "productCode",
+    align: "center",
+    scopedSlots: { customRender: "productCode" },
+  },
+  {
+    title: "产品名称",
+    dataIndex: "productName",
+    align: "center",
+    scopedSlots: { customRender: "productName" },
+  },
+  {
+    title: "单位",
+    dataIndex: "buyType",
+    align: "center",
+    scopedSlots: { customRender: "buyType" },
+  },
+  {
+    title: "总数量",
+    dataIndex: "totalNum",
+    align: "center",
+    scopedSlots: { customRender: "totalNum" },
+  },
+  {
+    title: "需求数量",
+    dataIndex: "requirementAmout",
+    align: "center",
+    width: 200,
+    scopedSlots: { customRender: "requirementAmout" },
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    // fixed: "right"
+  },
+];
+
+const dataSource = [
+  {
+    key: 1,
+    subtenderId: 1,
+    subtenderName: "123",
+    productCode: "123",
+    productName: "123",
+    buyType: "mi",
+    totalNum: 0,
+    requirementAmout: "1",
+  },
+];
+export default {
+  components: {  EditableCell,Heading,pagination },
+   props:["isView"],
+  data() {
+    return {
+      id: this.$route.query.key,
+      columns: columns,
+      dataSource,
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      filter: {},
+      pageData: {
+        limit: 10,
+        total: 0,
+        page: 1,
+        loading: false,
+      },
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+  },
+  created() {
+   
+  },
+  methods: {
+    onSelectChange(data, row) {
+      this.$message.info("选中行改变了");
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      // this.toSearch();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      // this.toSearch();
+    },
+  },
+};
+</script>
+<style lang="less" scoped>
+.table-operations {
+  text-align: right;
+  margin: 10px 5px;
+}
+.table-operations > button {
+  margin-right: 8px;
+}
+
+</style>

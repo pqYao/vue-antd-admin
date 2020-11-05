@@ -1,0 +1,18 @@
+import { FIND, ROUTES } from "@/services/api";
+import { request, METHOD } from "@/utils/request";
+
+/**
+ * 招标采购
+ */
+export async function findProjectInfoByPage(data) {
+  return request(FIND, METHOD.GET, data);
+}
+
+export async function getRoutesConfig() {
+  return request(ROUTES, METHOD.GET);
+}
+
+export default {
+  findProjectInfoByPage,
+  getRoutesConfig
+};

@@ -1,0 +1,88 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="项目信息"></Heading>
+      <Descriptions 
+        :list="baseList" 
+        :param="formData" 
+        :jumpData="jumpData">
+      </Descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+import Heading from "@/components/heading/Heading";
+import Descriptions from "@/components/descriptions/Description";
+import { findSubContractForProject } from "@/services/bid";
+
+export default {
+  name: 'sub-contract-project',
+  components: { Heading, Descriptions },
+  data() {
+    return {
+      formData: {},
+      jumpData: {},
+      baseList: [
+        {
+          label: "采购项目编号",
+          key: "projectCode",
+          show: true,
+          jump: true
+        },
+        {
+          label: "采购项目名称",
+          key: "projectName",
+          show: true
+        },
+        { 
+          label: "是否委托", 
+          key: "entrustFlag", 
+          flag: true, 
+          show: true 
+        },
+        {
+          label: "采购方式",
+          key: "purchaseType",
+          show: true,
+          dic: true
+        },
+        {
+          label: "是否资格预审",
+          key: "prequalficationFlag",
+          flag: true, 
+          show: true,
+        },
+        { 
+          label: "代理机构名称", 
+          key: "agencyOrgName",
+          show: false 
+        }
+      ]
+    };
+  },
+  created() {
+    this.findInfo();
+  },
+  methods: {
+    findInfo() {
+      findSubContractForProject(this.$route.params.id).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult;
+          this.jumpData = {
+            projectCode: {
+              url: `/bid/prepare/detail/${responseResult.projectId}`
+            }
+          }
+          this.baseList[5].show = (responseResult.entrustFlag == 1) ? true : false;
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    }
+  }
+};
+</script>

@@ -1,0 +1,403 @@
+<template>
+  <div>
+    <!-- 查询条件 -->
+    <SearchForm
+      ref="SearchForm"
+      name="查询条件"
+      stateCode="entrust"
+      :searchList="searchList"
+      @on-filter="handleSearch"
+    ></SearchForm>
+    <!-- 查询结果 -->
+    <a-card>
+      <Heading name="查询结果"></Heading>
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        rowKey="projectId"
+        :scroll="{ x: 1700 }"
+        :columns="columns"
+        :dataSource="dataSource"
+      >
+        <!-- 点击项目编号跳转 -->
+        <a
+          slot="projectCode"
+          slot-scope="text, record"
+          @click="handleProjectDetail(record)"
+          >{{ text }}</a
+        >
+        <!-- 采购方式 -->
+        <template slot="purchaseType" slot-scope="text">{{
+          dictionary.otherPurchaseType[text]
+        }}</template>
+        <!-- 是否委托 -->
+        <template slot="entrustFlag" slot-scope="text">{{
+          text === "1" ? "是" : "否"
+        }}</template>
+        <!-- 是否资格预审 -->
+        <template slot="prequalficationFlag" slot-scope="text">{{
+          (text == "1" && "是") || (text == "0" && "否") || "--"
+        }}</template>
+        <!-- 审批状态 -->
+        <template slot="approveState" slot-scope="text">
+          {{ dictionary.approveState[text] }}
+        </template>
+        <!-- 业务状态 -->
+        <template slot="operationState" slot-scope="text">
+          {{ text ? operationState[text] : "" }}
+        </template>
+        <!-- 操作 -->
+        <template slot="action" slot-scope="record">
+          <a-space :size="8">
+            <!-- 单据未做完归档，显示此按钮  -->
+            <a
+              v-if="
+                record.createId === user.userId && record.approveState === '1'
+              "
+              @click="handleEdit(record)"
+              >编辑</a
+            >
+            <a v-else @click="handleEntrustDetail(record)">查看</a>
+
+            <a-popconfirm
+              v-if="
+                record.createId === user.userId &&
+                  record.operationState != '402'
+              "
+              :ok-text="record.isCanbeFinish ? '确定' : '编辑'"
+              :title="
+                record.isCanbeFinish
+                  ? '是否编辑完成?'
+                  : '委托函信息不完善，是否继续编辑?'
+              "
+              @confirm="fnConfirm(record)"
+            >
+              <a @mouseenter="fnJudgeCanbeFinish(record)">编辑完成</a>
+            </a-popconfirm>
+            <a-popover
+              v-if="
+                record.createId === user.userId &&
+                  record.operationState != '402'
+              "
+              content="此功能暂不支持"
+            >
+              <a>项目回退</a>
+            </a-popover>
+            <a-popover content="此功能暂不支持">
+              <a>业务流程跟踪</a>
+            </a-popover>
+          </a-space>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { operationStateMap } from "@/services/basic";
+import {
+  findEntrustByPage,
+  compeleteEntrust,
+  validateEntrustInfo
+} from "@/services/other";
+
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 60
+  },
+  {
+    title: "项目编码",
+    dataIndex: "projectCode",
+    width: 150,
+    align: "center",
+    scopedSlots: { customRender: "projectCode" }
+  },
+  {
+    title: "项目名称",
+    dataIndex: "projectName",
+    ellipsis: true
+  },
+  {
+    title: "采购方式",
+    dataIndex: "purchaseType",
+    scopedSlots: { customRender: "purchaseType" },
+    width: 120,
+    align: "center"
+  },
+  {
+    title: "是否资格预审",
+    dataIndex: "prequalficationFlag",
+    scopedSlots: { customRender: "prequalficationFlag" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "是否委托",
+    dataIndex: "entrustFlag",
+    scopedSlots: { customRender: "entrustFlag" },
+    width: 80,
+    align: "center"
+  },
+  {
+    title: "代理机构名称",
+    dataIndex: "agencyOrgName",
+    width: 300,
+    ellipsis: true
+  },
+  {
+    title: "项目创建时间",
+    dataIndex: "projectCreateDate",
+    width: 180,
+    align: "center"
+  },
+  {
+    title: "审批状态",
+    dataIndex: "approveState",
+    width: 80,
+    align: "center",
+    scopedSlots: { customRender: "approveState" }
+  },
+  {
+    title: "业务状态",
+    dataIndex: "operationState",
+    scopedSlots: { customRender: "operationState" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    fixed: "right"
+  }
+];
+
+const searchList = [
+  {
+    type: "input",
+    label: "项目编码",
+    key: "projectCode"
+  },
+  {
+    type: "input",
+    label: "项目名称",
+    key: "projectName"
+  },
+  {
+    type: "otherPurchaseType",
+    label: "采购方式",
+    key: "purchaseType"
+  },
+  {
+    type: "flag",
+    label: "资格预审",
+    key: "prequalficationFlag",
+    flag: true
+  },
+  {
+    type: "flag",
+    label: "是否委托",
+    key: "entrustFlag"
+  },
+  {
+    type: "input",
+    label: "代理机构名称",
+    key: "agencyOrgName"
+  },
+  {
+    type: "select",
+    label: "审批状态",
+    key: "approveState"
+  },
+  {
+    type: "operationState",
+    label: "业务状态",
+    key: "operationState"
+  },
+  {
+    type: "date",
+    label: "项目创建时间",
+    key: "projectCreateDate"
+  }
+];
+
+export default {
+  name: "entrust",
+  components: { Heading, SearchForm, Pagination },
+  data() {
+    return {
+      columns,
+      dataSource: [],
+      searchList,
+      filter: {},
+      pageData,
+      operationState: []
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary", "user"])
+  },
+  created() {
+    this.getData();
+    this.getOperationState();
+  },
+  activated() {
+    this.$refs.SearchForm.handleReset();
+    this.filter = {};
+    this.getData();
+  },
+  watch: {
+    operationState: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    handleSearch(data) {
+      this.filter = data;
+      this.getData();
+    },
+    getOperationState() {
+      operationStateMap("entrust").then(result => {
+        const resData = result.data;
+        if (resData.errCode === "0000") {
+          let arr = {};
+          for (var i in resData.responseResult) {
+            let key = i.split("_");
+            if (!arr[key[0]]) arr[key[0]] = [];
+            arr[key[0]][key[1]] = resData.responseResult[i];
+          }
+          for (const key in arr) {
+            this.operationState = arr[key];
+          }
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findEntrustByPage(param).then(res => {
+        const resData = res.data;
+        const responseResult = resData.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          if (this.dataSource.length != 0) {
+            this.dataSource.forEach(ele => {
+              this.$set(ele, "isCanbeFinish", false);
+            });
+          }
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    handleEdit(record) {
+      this.$router.push({
+        path: `/other/prepare/entrust-edit/${record.projectId}`,
+        query: {
+          entrustId: record.entrustId
+        }
+      });
+    },
+    handleEntrustDetail(record) {
+      this.$router.push({
+        path: `/other/prepare/entrust-detail/${record.projectId}`
+      });
+    },
+    handleProjectDetail(record) {
+      this.$router.push({
+        path: `/other/prepare/detail/${record.projectId}`
+      });
+    },
+    fnJudgeCanbeFinish(record) {
+      validateEntrustInfo(record.entrustId).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          record.isCanbeFinish = true;
+        } else {
+          record.isCanbeFinish = false;
+        }
+      });
+    },
+    fnConfirm(record) {
+      if (record.isCanbeFinish) {
+        compeleteEntrust(record.entrustId).then(res => {
+          const resData = res.data;
+          if (resData.errCode === "0000") {
+            const { responseResult } = resData;
+            this.$message.success(responseResult);
+            this.getData();
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        });
+      } else {
+        this.$router.push({
+          path: `/other/prepare/entrust-edit/${record.projectId}`,
+          query: {
+            entrustId: record.entrustId
+          }
+        });
+      }
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    }
+  }
+};
+</script>

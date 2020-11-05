@@ -1,0 +1,78 @@
+<template>
+  <a-descriptions bordered size="middle">
+    <a-descriptions-item
+      v-for="(item, i) in formList"
+      :key="i"
+      :label="item.label"
+      :span="item.span"
+      v-show="item.show"
+    >
+      <template v-if="item.flag">
+        {{ param[item.key] === "1" ? "是" : "否" }}
+      </template>
+      <template v-else-if="item.dic">
+        {{ dictionary[item.key][param[item.key]] }}
+      </template>
+      <template v-else-if="item.jump">
+        <a @click="fnJumpPage(item.key, jumpData)">{{ param[item.key] }}</a>
+      </template>
+      <template v-else>
+        {{ param[item.key] }}
+      </template>
+    </a-descriptions-item>
+  </a-descriptions>
+</template>
+<script>
+import { mapGetters } from "vuex";
+export default {
+  name: "descriptions",
+  props: {
+    list: {
+      type: Array,
+      required: true,
+      default: () => []
+    },
+    param: {
+      type: Object,
+      required: true,
+      default: () => {}
+    },
+    jumpData: {
+      type: Object,
+      required: false,
+      default: () => {}
+    }
+  },
+  watch: {
+    list: {
+      handler(val) {
+        console.log(val);
+
+        return val;
+      },
+      immediate: true,
+      deep: true
+    },
+    param: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    formList: function() {
+      return this.list.filter(item => item.show === true);
+    }
+  },
+  methods: {
+    fnJumpPage(key, data) {
+      this.$router.push({
+        path: data[key].url
+      });
+    }
+  }
+};
+</script>

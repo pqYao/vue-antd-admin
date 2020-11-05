@@ -1,0 +1,168 @@
+<template>
+	<a-card class="contact-info-wrapper">
+		<Heading name="联系人信息">
+      <a-button 
+      	v-if="pageType == 1"
+      	type="primary" 
+      	@click="handleSubmit">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+		<Descriptions 
+			v-if="pageType == 0"
+      :list="labelList" 
+      :param="formData"> 
+    </Descriptions>
+		<a-form
+			v-else
+			:form="form"
+      layout="horizontal"
+      class="es-form"
+      @keydown.native.enter.prevent="handleSubmit">
+      <a-row>
+      	<a-col :md="8" :sm="24">
+      		<a-form-item label="联系人" v-bind="BASE.oneItemLayout">
+            <a-input
+              @click="onSearch('linkman')"
+              v-decorator="[
+                `linkman`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.linkman,
+                  rules: [{ required: true, message: '请选择联系人' }]
+                }
+              ]"
+              placeholder="请选择">
+              <a-icon
+                slot="suffix"
+                type="search"
+                @click="onSearch('linkman')"/>
+            </a-input>
+          </a-form-item>
+      	</a-col>
+      	<a-col :md="8" :sm="24">
+      		<a-form-item label="电话" v-bind="BASE.oneItemLayout">
+            <a-input
+              disabled
+              v-model="formData.linkmanPhone"
+              placeholder="根据联系人自动带出"
+            />
+          </a-form-item>
+      	</a-col>
+      </a-row>	
+    </a-form>
+		<!-- 弹框选联系人 -->
+		<a-modal
+			v-if="linkmanVisible"
+      v-model="linkmanVisible"
+      title="选择联系人"
+      width="80%"
+      :centered="true"
+      :maskClosable="false"
+      @ok="handleSelectOk('linkman')">
+      <contact-select 
+      	ref="linkman"
+      	:param="contactParam">
+      </contact-select>
+    </a-modal>
+	</a-card>
+</template>
+
+<script>
+	import { saveSignUpBaseInfo } from "@/services/response";
+	export default {
+		name: "contact-info",
+		components: {
+			Heading: () => import('@/components/heading/Heading'),
+			Descriptions: () => import('@/components/descriptions/Description'),
+			ContactSelect: () => import("@/components/table/ContactSelect")
+		},
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			},
+			baseData: {
+				type: Object,
+				default() {
+					return {}
+				}
+			}
+		},
+		data() {
+			return {
+				form: this.$form.createForm(this),
+				formData: {},
+				linkmanVisible: false,
+				contactParam: {},
+				labelList: [
+	        {
+	          label: "联系人",
+	          key: "linkman",
+	          show: true
+	        },
+	        {
+	          label: "电话",
+	          key: "linkmanPhone",
+	          show: true
+	        }
+	      ]
+			}
+		},
+		computed: {
+			// projectId() {
+			// 	return this.$route.params.id
+			// }
+		},
+		watch: {
+			baseData: {
+				handler() {
+					this.formData = Object.assign({}, this.baseData);
+				},
+				deep: true
+			}
+		},
+		created() {
+			this.formData = Object.assign({}, this.baseData);
+		},
+		methods: {
+			handleSubmit() {
+				this.form.validateFields((err, values) => {
+					if (!err) {
+						for (let i in values) {
+	            this.formData[i] = values[i];
+	          }
+						saveSignUpBaseInfo(this.formData).then(res => {
+		          const resData = res.data || {};
+		          if (resData.errCode == "0000") {
+		          	this.$emit('update-base-info', resData.responseResult);
+		            this.$message.success('保存成功', 3);
+		            //this.fnGetData();
+		          } else {
+		            this.$error({
+		              title: "错误提示",
+		              content: this.BASE.handleErrorMsg(resData)
+		            });
+		          }
+		        });
+					}
+				})
+			},
+			onSearch(type) {
+				this[`${type}Visible`] = true;
+				this.contactParam = {
+					vendorId: this.baseData.providerId
+				}
+			},
+			handleSelectOk(key) {
+				let data = this.$refs[key].getRes();
+				this.form.setFieldsValue({ [key]: data.userName });
+        this.formData.linkmanPhone = data.userPhone;
+				this.formData.linkmanId = data.vendorUserId;
+				this[`${key}Visible`] = false;
+			}
+		}
+	}
+</script>

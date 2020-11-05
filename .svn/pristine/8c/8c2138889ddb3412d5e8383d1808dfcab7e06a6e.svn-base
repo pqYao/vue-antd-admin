@@ -1,0 +1,251 @@
+<template>
+  <div class="answer-info-edit-wrapper">
+    <package-info 
+      id="标包信息"
+      :pageType=1
+      :baseData="baseData">
+    </package-info>
+    <quote-price
+      id="报价信息"
+      :pageType=1
+      :baseData="baseData">
+    </quote-price>
+    <quote-file
+      id="投标文件"
+      :pageType=1
+      tableName="投标文件">
+    </quote-file>
+    <technology-file
+      id="技术文件"
+      :pageType=1
+      tableName="技术文件">
+    </technology-file>
+    <business-file
+      id="商务文件"
+      :pageType=1
+      tableName="商务文件">
+    </business-file>
+    <!-- 审批操作 -->
+    <audit-button>
+      <a-popconfirm
+        :visible="isVisibleWithdrewPop"
+        title="确定撤回应答信息?"
+        @cancel="fnCancel"
+        @confirm="fnConfirm"
+        @visibleChange="handleVisibleChange">
+        <!-- 当应答信息单处于已提交时，才展示 -->
+        <a-button 
+          v-if="baseData.operationState == 502"
+          type="primary"
+          @click="fnJudgeCanbeSubmit(0)">
+          撤回应答信息
+        </a-button>
+      </a-popconfirm>
+      <a-popconfirm
+        :visible="isVisibleSubmitPop"
+        title="确定提交应答信息?"
+        @cancel="fnCancel"
+        @confirm="fnConfirm"
+        @visibleChange="handleVisibleChange">
+        <a-button 
+          type="primary"
+          @click="fnJudgeCanbeSubmit(1)">
+          提交应答信息
+        </a-button>
+      </a-popconfirm>
+      <a-button 
+        type="primary" 
+        @click="fnAction(0)">
+        电子签名
+      </a-button>
+      <a-button 
+        type="primary" 
+        @click="fnAction(1)">
+        加密
+      </a-button>
+    </audit-button>
+    <Anchor :anchorList="anchorList"></Anchor>
+  </div>
+</template>
+
+<script>
+import { 
+  getAnswerInfoDetailById, 
+  getWithdrewAnswerInfo,
+  getSubmitAnswerInfo,
+  answerInfoEleSign,
+  answerInfoEncrypted
+} from "@/services/response";
+
+export default {
+  name: 'answer-info-edit',
+  inject: ['reload'],
+  components: {
+    Anchor: () => import("@/components/anchor/Anchor"),
+    AuditButton: () => import("@/components/button/AuditButton"),
+    PackageInfo: () => import("./components/PackageInfo"),
+    QuotePrice: () => import("./components/QuotePrice"),
+    QuoteFile: () => import("./components/FileTable"),
+    TechnologyFile: () => import("./components/FileTable"),
+    BusinessFile: () => import("./components/FileTable"),
+  },
+  data() {
+    return {
+      isVisibleSubmitPop: false,
+      isVisibleWithdrewPop: false,
+      btnType: 0,
+      baseData: {},
+      anchorList: ["标包信息", "报价信息", "报价文件", "技术文件", "商务文件"]
+    }
+  },
+  created() {
+    this.fnGetBaseData();
+  },
+  activated() {
+    this.fnGetBaseData();
+  },
+  computed: {
+    replyDetailId() {
+      return this.$route.params.id
+    }
+  },
+  methods: {
+    fnGetBaseData() {
+      let param = {
+        providerReplayDetailId: this.replyDetailId
+      }
+      getAnswerInfoDetailById(param, this.replyDetailId).then(res => {
+        const resData = res.data || {};
+        if (resData.errCode == "0000") {
+          this.baseData = resData.responseResult || {};
+        } else {
+         this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    fnAction(type) {
+      switch (type) {
+        //电子签名
+        case 0: 
+          answerInfoEleSign(this.replyDetailId).then(res => {
+            const resData = res.data || {};
+            if (resData.errCode == "0000") {
+              this.$message.success(resData.responseResult, 3);
+              //刷新当前页
+              this.reload();
+            } else {
+              this.$error({
+                title: "错误提示",
+                content: this.BASE.handleErrorMsg(resData)
+              });
+            }
+          });
+          break;
+        //加密  
+        case 1: 
+          answerInfoEncrypted(this.replyDetailId).then(res => {
+            const resData = res.data || {};
+            if (resData.errCode == "0000") {
+              this.$message.success(resData.responseResult, 3);
+              //刷新当前页
+              this.reload();
+            } else {
+              this.$error({
+                title: "错误提示",
+                content: this.BASE.handleErrorMsg(resData)
+              });
+            }
+          });
+          break;  
+      }
+    },
+    fnJudgeCanbeSubmit(type) {
+      //0: 撤回 1: 提交
+      this.btnType = type;
+      let param = {
+        replyDetailId: this.baseData.replyDetailId,
+        checkFlag: true
+      };
+      if (this.btnType == 0) {
+        getWithdrewAnswerInfo(param).then(res => {
+          const resData = res.data;
+          if (resData.errCode == "0000") {
+            this.isVisibleWithdrewPop = true;
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        });
+      } else {
+        getSubmitAnswerInfo(param).then(res => {
+          const resData = res.data;
+          if (resData.errCode == "0000") {
+            this.isVisibleSubmitPop = true;
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        });
+      }
+    },
+    fnConfirm() {
+      let param = {
+        replyDetailId: this.baseData.replyDetailId,
+        checkFlag: false
+      }
+      if (this.btnType == 0) {
+        getWithdrewAnswerInfo(param).then((res) => {
+          const resData = res.data;
+          this.isVisibleWithdrewPop = false;
+          if (resData.errCode == "0000") {
+            this.$message.success(resData.responseResult, 3);
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        })
+      } else {
+        getSubmitAnswerInfo(param).then((res) => {
+          const resData = res.data;
+          this.isVisibleSubmitPop = false;
+          if (resData.errCode == "0000") {
+            this.$message.success(resData.responseResult, 3);
+            this.$router.push({path: `/response/answer-edit/${this.$route.query.pid}`});
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        })
+      }
+    },
+    handleVisibleChange(visible) {
+      if (!visible) {
+        if (this.btnType == 0) {
+          this.isVisibleWithdrewPop = false;
+        } else {
+          this.isVisibleSubmitPop = false;
+        }
+        return;
+      }
+    },
+    fnCancel() {
+      if (this.btnType == 0) {
+        this.isVisibleWithdrewPop = false;
+      } else {
+        this.isVisibleSubmitPop = false;
+      }
+    },
+  },
+};
+</script>

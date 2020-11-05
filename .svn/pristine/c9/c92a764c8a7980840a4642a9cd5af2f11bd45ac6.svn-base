@@ -1,0 +1,323 @@
+<template>
+	<div class="answer-info-wrapper">
+		<a-card>
+      <Heading name="应答信息"></Heading>
+      <a-table
+        bordered
+        size="small"
+        class="es-table"
+        rowKey="replyDetailId"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }">
+        <!-- 编辑状态 -->
+        <template slot="operationState" slot-scope="text">
+          {{ editOperationState[text] }}
+        </template>
+        <template slot="action" slot-scope="text, record">
+          <a
+          	v-if="record.operationState == 500 || record.operationState == 501"
+            style="margin-right: 8px"
+            @click="handleAction(record.replyDetailId, 1)">
+            编辑
+          </a>
+          <a
+          	v-else
+            style="margin-right: 8px"
+            @click="handleAction(record.replyDetailId, 0)">
+            查看
+          </a>
+          <a-popconfirm
+            :ok-text="isCanbeFinish ? '确定' : '编辑'"
+            :title="
+              isCanbeFinish ? '确定提交应答信息?' : '应答信息不完善，是否继续编辑?'
+            "
+            @confirm="fnConfirmSubmit(record)"
+          >
+            <a
+            	v-if="record.operationState == 500 || record.operationState == 501"
+              style="margin-right: 8px"
+              @mouseenter="fnJudgeCanbeSubmit(record)"
+            >
+              提交应答信息
+            </a>
+          </a-popconfirm>
+          <!-- 当应答信息单处于提交归档状态时，才展示 -->
+          <a-popconfirm
+		        title="确定撤回应答信息?"
+		        @confirm="fnConfirmWithdrew(record)">
+		        <a v-if="record.operationState == 502" style="margin-right: 8px">
+		          撤回应答信息
+		        </a>
+		      </a-popconfirm>
+        </template>
+      </a-table>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      >
+      </pagination>
+    </a-card>
+	</div>
+</template>
+<script>
+	import { mapGetters } from "vuex";
+	import { 
+		getAnswerInfoList, 
+		getWithdrewAnswerInfo,
+		getSubmitAnswerInfo
+	} from "@/services/response";
+
+	export default {
+		name: "answer-info",
+		components: {
+			Heading: () => import("@/components/heading/Heading"),
+			pagination: () => import("@/components/pagination/Pagination")
+		},
+		props: {
+			//0 详情界面，1 编辑界面
+			pageType: {
+				type: [String, Number],
+				default: 0
+			},
+			editOperationState: {
+				type: Array,
+				default() {
+					return []
+				}
+			}
+		},
+		data() {
+			return {
+				isCanbeFinish: false,
+	      pageData: {
+	        limit: 15,
+	        total: 0,
+	        page: 1,
+	        loading: false
+	      },
+	      dataSource: [],
+	      columns: [],
+	      columnsData: [
+	        {
+	          title: "序号",
+	          dataIndex: "number",
+	          align: "center",
+	          customRender: (text, record, index) => `${index + 1}`,
+	          width: 80,
+	          fixed: 'left'
+	        },
+	        {
+	          title: "标名",
+	          dataIndex: "tenderName",
+	          width: 150
+	        },
+	        {
+	          title: "包名",
+	          dataIndex: "contractName",
+	          width: 150,
+	        },
+	        {
+	          title: "未含税总价(元)",
+	          dataIndex: "totalMoneyFree",
+	          width: 130,
+	          align: 'right'
+	        },
+	        {
+	          title: "含税总价(元)",
+	          dataIndex: "totalMoney",
+	          width: 120,
+	          align: 'right'
+	        },
+	        {
+	          title: "税额(元)",
+	          dataIndex: "taxMoney",
+	          width: 120,
+	          align: 'right'
+	        },
+	        {
+	          title: "税率(%)",
+	          dataIndex: "taxRate",
+	          width: 100,
+	          align: 'right'
+	        },
+	        {
+	          title: "折扣率(%)",
+	          dataIndex: "encryptState",
+	          width: 100,
+	          align: 'right'
+	        },
+	        {
+	          title: "报价文件",
+	          dataIndex: "444",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "技术文件",
+	          dataIndex: "555",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "商务文件",
+	          dataIndex: "666",
+	          width: 120,
+	          align: 'center'
+	        },
+	        {
+	          title: "编辑状态",
+	          dataIndex: "operationState",
+	          width: 120,
+	          align: 'center',
+	          scopedSlots: { customRender: "operationState" },
+	        },
+	        {
+	          title: "操作",
+	          align: "center",
+	          scopedSlots: { customRender: "action" },
+	          width: 120,
+	          fixed: 'right'
+	        }
+	      ]
+			}
+		},
+		created() {
+			this.fnInit();
+		},
+		computed: {
+			...mapGetters("account", ["dictionary", "user"]),
+			projectId() {
+				return this.$route.params.id
+			}
+		},
+		methods: {
+			fnInit() {
+				//详情界面不展示操作列
+	      this.columns = [];
+	      let arr = [...this.columnsData],
+	        index = this.columnsData.length - 1;
+	      if (this.pageType == 0) {
+	        arr.splice(index, 1);
+	      }
+	      this.columns = [...arr];
+	      this.fnGetData();
+			},
+			fnGetData() {
+				let param = {
+          limit: this.pageData.limit,
+          page: this.pageData.page,
+          projectId: this.projectId
+        }
+	      this.pageData.loading = true;
+	      getAnswerInfoList(param).then(res => {
+	        const resData = res.data || {};
+	        const responseResult = resData.responseResult || {};
+	        if (resData.errCode == "0000") {
+	          const { data, total } = responseResult;
+	          this.dataSource = data;
+	          this.pageData.total = Number(total);
+	        } else {
+	         this.$error({
+	            title: "错误提示",
+	            content: this.BASE.handleErrorMsg(resData)
+	          });
+	        }
+	        this.pageData.loading = false;
+	      });
+			},
+			//判断是否可以提交应答信息
+			fnJudgeCanbeSubmit(record) {
+				let param = {
+	        replyDetailId: record.replyDetailId,
+	        checkFlag: true
+	      };
+	      getSubmitAnswerInfo(param).then(res => {
+	        const resData = res.data;
+	        if (resData.errCode == "0000") {
+	          this.isCanbeFinish = true;
+	        } else {
+	          this.isCanbeFinish = false;
+	        }
+	      });
+			},
+			//确认提交应答信息
+			fnConfirmSubmit(record) {
+				let param = {
+	        replyDetailId: record.replyDetailId,
+	        checkFlag: false
+	      };
+	      if (this.isCanbeFinish) {
+	        //可以提交应答信息
+	        getSubmitAnswerInfo(param).then(res => {
+	          const resData = res.data;
+	          if (resData.errCode == "0000") {
+	            this.fnGetData();
+	            this.$message.success(resData.responseResult, 3);
+	          } else {
+	            this.$error({
+	              content: this.BASE.handleErrorMsg(resData)
+	            });
+	          }
+	        });
+	      } else {
+	        //不可以提交应答信息，点击编辑跳转到编辑界面
+	        this.$router.push({
+	          path: `/response/answer-info-edit/${record.replyDetailId}`
+	        });
+	      }
+			},
+	    fnConfirmWithdrew(record) {
+	    	let param = {
+	    		replyDetailId: record.replyDetailId,
+	        checkFlag: false
+	    	}
+	    	getWithdrewAnswerInfo(param).then(res => {
+          const resData = res.data || {};
+          if (resData.errCode == "0000") {
+            this.$message.success(resData.responseResult, 3);
+           	this.fnGetData();
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        });
+	    },
+			handleAction(data, type) {
+				//0 查看, 1 编辑
+				if (type == 1) {
+					this.$router.push({
+		        path: `/response/answer-info-edit/${data}`,
+		        query: {pid: this.projectId}
+		      });
+				} else {
+					this.$router.push({
+		        path: `/response/answer-info-detail/${data}`,
+		        query: {pid: this.projectId}
+		      });
+				}
+				
+			},
+			sizeChange(page, pageSize) {
+	      this.pageData.page = page;
+	      this.pageData.limit = pageSize;
+	      this.fnGetData();
+	    },
+	    pageChange(current, size) {
+	      this.pageData.page = current;
+	      this.pageData.limit = size;
+	      this.fnGetData();
+	    }
+		}
+	}
+</script>

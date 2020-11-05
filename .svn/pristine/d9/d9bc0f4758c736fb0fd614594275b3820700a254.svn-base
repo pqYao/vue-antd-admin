@@ -1,0 +1,123 @@
+<template>
+  <div>
+    <set-file id="维护项目文件"></set-file>
+    <set-time id="招标时间设置"></set-time>
+    <!-- 邀请招标才展示 -->
+    <supplier
+      id="邀请供应商"
+      v-if="
+        purchaseType == '2' ||
+          purchaseType == '4' ||
+          purchaseType == '6' ||
+          purchaseType == '8'
+      "
+    ></supplier>
+    <notice
+      id="公告"
+      :noticeType="1"
+      :noticeName="noticeName"
+      v-if="
+        purchaseType == '1' ||
+          purchaseType == '3' ||
+          purchaseType == '5' ||
+          purchaseType == '7'
+      "
+    ></notice>
+    <!-- <file name="公告附件" id="公告附件"></file> -->
+    <Invitation
+      :noticeType="2"
+      id="邀请函"
+      v-if="
+        purchaseType == '2' ||
+          purchaseType == '4' ||
+          purchaseType == '6' ||
+          purchaseType == '8'
+      "
+    ></Invitation>
+    <!-- <file name="邀请函附件" id="邀请函附件"></file> -->
+    <!-- 审批操作 -->
+    <audit-button>
+      <a-popover content="此功能暂不支持">
+        <a-button type="primary" disabled>项目回退</a-button>
+      </a-popover>
+      <!-- 单据没有审批流才展示 -->
+      <a-popconfirm
+        :visible="isCanbeFinish"
+        title="是否确定发标?"
+        @cancel="fnCancel"
+        @confirm="handleCompeleted"
+        @visibleChange="handleVisibleChange"
+      >
+        <a-button @click="fnJudgeCanbeFinish()" type="primary">
+          确定发标
+        </a-button>
+      </a-popconfirm>
+      <!-- 单据有审批流才展示 -->
+      <a-button type="primary" @click="fnJudgeCanbeFinish">提交审批</a-button>
+      <a-popover content="此功能暂不支持">
+        <a-button type="primary" disabled>业务流程追踪</a-button>
+      </a-popover>
+    </audit-button>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import { mixins } from "./mixins.js";
+import { validateSendTenderInfo, sendTenderFinish } from "@/services/compare";
+export default {
+  name: "enturst-edit",
+  mixins: [mixins],
+  computed: {
+    noticeName() {
+      return (
+        (this.purchaseType == 1 && "招标公告") ||
+        ((this.purchaseType == 3 ||
+          this.purchaseType == 5 ||
+          this.purchaseType == 7) &&
+          "采购公告")
+      );
+    }
+  },
+  activated() {
+    if (this.noticeName) {
+      this.anchorList[2] = "公告";
+    } else {
+      this.anchorList[3] = "邀请函";
+    }
+  },
+  methods: {
+    fnCancel() {
+      this.isCanbeFinish = false;
+    },
+    handleVisibleChange(visible) {
+      if (!visible) {
+        this.isCanbeFinish = false;
+        return;
+      }
+    },
+    fnJudgeCanbeFinish() {
+      validateSendTenderInfo(this.tenderVindicateId).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.isCanbeFinish = true;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    handleCompeleted() {
+      sendTenderFinish(this.tenderVindicateId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.$closePage(this.$route.fullPath);
+        }
+      });
+    }
+  }
+};
+</script>

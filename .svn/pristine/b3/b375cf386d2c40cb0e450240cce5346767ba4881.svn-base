@@ -1,0 +1,22 @@
+import Anchor from "@/components/anchor/Anchor";
+import { mapGetters } from "vuex";
+export const mixins = {
+  components: {
+    Anchor
+  },
+  data() {
+    return {
+      projectData: {},
+      divideTenderDataLength: 0,
+      anchorList: ["项目信息", "分标明细", "产品明细"]
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+  },
+  methods: {
+  
+  }
+};

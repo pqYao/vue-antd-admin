@@ -1,0 +1,208 @@
+<template>
+  <a-card>
+    <Heading name="项目情况说明">
+      <a-button
+        type="primary"
+        @click="handleSubmit"
+        v-if="show"
+        :disabled="isConnect"
+      >
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+    <a-form
+      v-if="show"
+      :form="form"
+      class="es-form"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row v-if="baseData.purchaseType === '2'">
+        <a-col :md="24" :sm="24">
+          <a-form-item label="邀请招标理由" v-bind="BASE.threeItemLayout">
+            <a-textarea
+              :rows="3"
+              @change="e => onCellChange(e.target.value, 'projectInvite')"
+              :maxLength="1000"
+              allowClear
+              v-decorator="[
+                'projectInvite',
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.projectInvite || '',
+                  rules: [{ required: true, message: '请填写邀请招标理由' }]
+                }
+              ]"
+            ></a-textarea>
+            <span class="explain-info"
+              >限<span class="red">1000</span>字，已输入<span class="red">{{
+                !!formData.projectInvite ? formData.projectInvite.length : 0
+              }}</span
+              >字</span
+            >
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="申报情况说明" v-bind="BASE.threeItemLayout">
+            <a-textarea
+              :rows="3"
+              @change="e => onCellChange(e.target.value, 'projectDeclare')"
+              :maxLength="1000"
+              allowClear
+              v-decorator="[
+                'projectDeclare',
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.projectDeclare || '',
+                  rules: [{ required: true, message: '请填写申报情况说明' }]
+                }
+              ]"
+            ></a-textarea>
+            <span class="explain-info"
+              >限<span class="red">1000</span>字，已输入<span class="red">{{
+                !!formData.projectDeclare ? formData.projectDeclare.length : 0
+              }}</span
+              >字</span
+            >
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="项目描述" v-bind="BASE.threeItemLayout">
+            <a-textarea
+              :rows="3"
+              @change="e => onCellChange(e.target.value, 'projectDescribe')"
+              :maxLength="1000"
+              allowClear
+              v-decorator="[
+                'projectDescribe',
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.projectDescribe || '',
+                  rules: [{ required: true, message: '请填写项目描述' }]
+                }
+              ]"
+            ></a-textarea>
+            <span class="explain-info"
+              >限<span class="red">1000</span>字，已输入<span class="red">{{
+                !!formData.projectDescribe ? formData.projectDescribe.length : 0
+              }}</span
+              >字</span
+            >
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="采购项目依据" v-bind="BASE.threeItemLayout">
+            <a-textarea
+              :rows="3"
+              @change="e => onCellChange(e.target.value, 'projectBasis')"
+              :maxLength="1000"
+              allowClear
+              v-decorator="[
+                'projectBasis',
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.projectBasis || '',
+                  rules: [{ required: true, message: '请填写采购项目依据' }]
+                }
+              ]"
+            ></a-textarea>
+            <span class="explain-info"
+              >限<span class="red">1000</span>字，已输入<span class="red">{{
+                !!formData.projectBasis ? formData.projectBasis.length : 0
+              }}</span
+              >字</span
+            >
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+  </a-card>
+</template>
+<script>
+import Heading from "@/components/heading/Heading";
+import { findProjectExplain, updateProjectExplain } from "@/services/bid";
+export default {
+  props: {
+    baseData: {
+      type: Object
+    }
+  },
+  components: { Heading },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      show: false,
+      isConnect: false
+    };
+  },
+  watch: {
+    baseData: {
+      handler(val) {
+        this.show = !this.BASE.ObjectIsNull(this.baseData);
+        if (this.show) {
+          this.findInfo();
+        }
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    findInfo() {
+      findProjectExplain(this.baseData.projectId || this.$route.params.id).then(
+        res => {
+          const resData = res.data;
+          if (resData.errCode == "0000") {
+            const { responseResult } = resData;
+            this.formData = responseResult;
+            this.$emit("send-data", this.formData);
+          } else {
+            this.$error({
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        }
+      );
+    },
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFields((error, values) => {
+        if (error) {
+          return;
+        }
+        for (let i in values) {
+          this.formData[i] = values[i];
+        }
+        this.isConnect = true;
+        this.updateInfo();
+      });
+    },
+    // 更新
+    updateInfo() {
+      updateProjectExplain(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          this.$message.success("更新成功", 3);
+          this.isConnect = false;
+          this.findInfo();
+        } else {
+          this.$error({
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    onCellChange(value, key) {
+      this.formData[key] = value;
+    }
+  }
+};
+</script>

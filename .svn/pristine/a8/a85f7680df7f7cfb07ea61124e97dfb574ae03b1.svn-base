@@ -1,0 +1,476 @@
+<template>
+  <div>
+    <!-- 查询条件 -->
+    <SearchForm
+      ref="SearchForm"
+      :searchList="searchList"
+      name="查询条件"
+      @on-filter="toSearch"
+      stateCode="createProject"
+    ></SearchForm>
+    <!-- 查询结果 -->
+    <a-card>
+      <Heading name="查询结果">
+        <a-button type="primary" @click="addNew">
+          <i :class="['iconfont', 'icon-xinzeng']"></i>
+          创建采购项目
+        </a-button>
+        <a-popconfirm
+          :disabled="!this.hasSelectedRowKeys"
+          title="确定批量删除?"
+          ok-text="确认"
+          cancel-text="取消"
+          @confirm="handleDelete"
+        >
+            <a-button type="primary" @click="handleDelete(0)">
+            <i :class="['iconfont', 'icon-weibiaoti544']"></i>
+            批量删除
+          </a-button>
+        </a-popconfirm>
+      </Heading>
+
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowSelection="{
+          fixed: true,
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange,
+          getCheckboxProps: getCheckboxProps
+        }"
+        :scroll="{ x: true }"
+        rowKey="projectId"
+      >
+        <a
+          slot="projectCode"
+          slot-scope="text, record"
+          @click="handleDetail(record)"
+          >{{ text }}</a
+        >
+        <template slot="purchaseType" slot-scope="text">{{
+          dictionary.comparatePurchaseType[text]
+        }}</template>
+        <template slot="itemState" slot-scope="text">
+          {{ dictionary.itemState[text] }}
+        </template>
+        <template slot="operationState" slot-scope="text">
+          {{ text ? operationState[text] : "" }}
+        </template>
+        <template slot="entrustFlag" slot-scope="text">{{
+          text === "1" ? "是" : "否"
+        }}</template>
+        <template slot="prequalficationFlag" slot-scope="text">{{
+          (text == "1" && "是") || (text == "0" && "否") || "--"
+        }}</template>
+
+        <template slot="action" slot-scope="record">
+          <a-space :size="8">
+            <a
+              v-if="record.createId === user.userId && record.itemState === '1'"
+              @click="handleEdit(record)"
+              >编辑</a
+            >
+            <a v-else @click="handleDetail(record)">查看</a>
+
+            <a-popconfirm
+              title="是否删除此项目?"
+              ok-text="确认"
+              cancel-text="取消"
+              @confirm="deleteById(record.projectId)"
+            >
+              <a
+                v-if="
+                  record.createId === user.userId && record.itemState === '1'
+                "
+                >删除</a
+              >
+            </a-popconfirm>
+
+            <a-popconfirm
+              :ok-text="record.isCanbeFinish ? '确定' : '编辑'"
+              :title="
+                record.isCanbeFinish
+                  ? '确定立项完成?'
+                  : '项目信息不完善，是否继续编辑?'
+              "
+              @confirm="fnConfirm(record)"
+            >
+              <a
+                v-if="
+                  record.createId === user.userId && record.itemState === '1'
+                "
+                @mouseenter="fnJudgeCanbeFinish(record)"
+                >立项完成</a
+              >
+            </a-popconfirm>
+            <a-popover content="此功能暂不支持">
+              <a> 业务流程跟踪 </a>
+            </a-popover>
+            <a-popconfirm
+              title="是否提交审批?"
+              ok-text="确认"
+              cancel-text="取消"
+              @confirm="handleSubmit(record.projectId)"
+            >
+              <a
+                v-if="
+                  record.createId === user.userId && record.itemState === '1'
+                "
+                >提交审批</a
+              >
+            </a-popconfirm>
+          </a-space>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import SearchForm from "@/components/form/SearchForm";
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import {
+  findProjectInfoByPage,
+  deleteProjectInfo,
+  projectCompeleted,
+  projectSubmit,
+  validateProjectInfo
+} from "@/services/compare";
+import { operationStateMap } from "@/services/basic";
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 80
+  },
+  {
+    title: "项目编码",
+    dataIndex: "projectCode",
+    width: 180,
+    align: "center",
+    scopedSlots: { customRender: "projectCode" }
+  },
+  {
+    title: "项目名称",
+    dataIndex: "projectName"
+  },
+  {
+    title: "采购方式",
+    dataIndex: "purchaseType",
+    scopedSlots: { customRender: "purchaseType" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "是否资格预审",
+    dataIndex: "prequalficationFlag",
+    scopedSlots: { customRender: "prequalficationFlag" },
+    width: 130,
+    align: "center"
+  },
+  {
+    title: "是否委托",
+    dataIndex: "entrustFlag",
+    scopedSlots: { customRender: "entrustFlag" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "创建时间",
+    dataIndex: "createDate",
+    width: 200,
+    align: "center"
+  },
+  {
+    title: "审批状态",
+    dataIndex: "itemState",
+    width: 100,
+    align: "center",
+    scopedSlots: { customRender: "itemState" }
+  },
+  {
+    title: "业务状态",
+    dataIndex: "operationState",
+    scopedSlots: { customRender: "operationState" },
+    width: 100,
+    align: "center"
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    fixed: "right"
+  }
+];
+
+const dataSource = [];
+
+const searchList = [
+  {
+    type: "input",
+    label: "项目编码",
+    key: "projectCode"
+  },
+  {
+    type: "input",
+    label: "项目名称",
+    key: "projectName"
+  },
+  {
+    type: "select",
+    label: "采购方式",
+    key: "comparatePurchaseType"
+  },
+  {
+    type: "flag",
+    label: "资格预审",
+    key: "prequalficationFlag",
+    flag: true
+  },
+  {
+    type: "flag",
+    label: "是否委托",
+    key: "entrustFlag"
+  },
+  { type: "date", label: "创建日期", key: "createDate" },
+  {
+    type: "select",
+    label: "审批状态",
+    key: "itemState"
+  },
+  {
+    type: "billState",
+    label: "业务状态",
+    key: "operationState"
+  }
+];
+
+export default {
+  name: "QueryList",
+  components: { Heading, SearchForm, Pagination },
+  data() {
+    return {
+      columns: columns,
+      dataSource: dataSource,
+      searchList: searchList,
+      selectedRowKeys: [],
+      selectedRows: [],
+      filter: {},
+      pageData: pageData,
+      operationState: []
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary", "user"]),
+    hasSelectedRowKeys() {
+      return !!this.selectedRowKeys.length == 0 ? false : true;
+    }
+  },
+  created() {
+    this.getData();
+    this.getOperationState();
+  },
+  activated() {
+    this.$refs.SearchForm.handleReset();
+    this.filter = {};
+    this.getData();
+  },
+  watch: {
+    operationState: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    toSearch(data) {
+      this.filter = data;
+      this.getData();
+    },
+    getOperationState() {
+      operationStateMap("createProject").then(result => {
+        const resData = result.data;
+        if (resData.errCode === "0000") {
+          let arr = {};
+          for (var i in resData.responseResult) {
+            let key = i.split("_");
+            if (!arr[key[0]]) arr[key[0]] = [];
+            arr[key[0]][key[1]] = resData.responseResult[i];
+          }
+          for (const key in arr) {
+            this.operationState = arr[key];
+          }
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.pageData.limit,
+          page: this.pageData.page
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      findProjectInfoByPage(param).then(res => {
+        const resData = res.data;
+        const responseResult = resData.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          if (this.dataSource.length != 0) {
+            this.dataSource.forEach(ele => {
+              this.$set(ele, "isCanbeFinish", false);
+            });
+          }
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    addNew() {
+      this.$router.push({
+        path: "/compare/prepare/add"
+      });
+    },
+    handleEdit(record) {
+      this.$router.push({
+        path: `/compare/prepare/edit/${record.projectId}`
+      });
+    },
+    handleDetail(record) {
+      this.$router.push({
+        path: `/compare/prepare/detail/${record.projectId}`
+      });
+    },
+    handleDelete(type) {
+      if (!this.hasSelectedRowKeys) {
+        this.$message.warning("请至少选择一条数据进行删除！");
+        return false;
+      }
+      if (type == 0) {
+        return;
+      }
+      this.deleteById();
+    },
+    // 删除
+    deleteById(id) {
+      let projectIds = id || this.selectedRowKeys.join(",");
+      deleteProjectInfo(projectIds).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.selectedRowKeys = [];
+          this.$message.warning(responseResult);
+          this.getData();
+        }
+      });
+    },
+    fnJudgeCanbeFinish(record) {
+      validateProjectInfo(record.projectId).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          record.isCanbeFinish = true;
+        } else {
+          record.isCanbeFinish = false;
+        }
+      });
+    },
+    fnConfirm(record) {
+      if (record.isCanbeFinish) {
+        projectCompeleted(record.projectId).then(res => {
+          const resData = res.data;
+          if (resData.errCode === "0000") {
+            const { responseResult } = resData;
+            this.$message.success(responseResult);
+            this.getData();
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        });
+      } else {
+        this.$router.push({
+          path: `/compare/prepare/edit/${record.projectId}`
+        });
+      }
+    },
+    handleSubmit(id) {
+      projectSubmit(id).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.getData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    },
+    // 选择框的默认属性配置
+    getCheckboxProps(record) {
+      return {
+        props: {
+          disabled: !(
+            this.user.userId == record.createId && record.itemState == 1
+          )
+        }
+      };
+    }
+  }
+};
+</script>

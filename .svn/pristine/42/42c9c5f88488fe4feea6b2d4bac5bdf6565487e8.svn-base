@@ -1,0 +1,437 @@
+<template>
+  <div class="dt-product-info-wrapper">
+    <a-card>
+      <Heading name="产品明细">
+        <!-- 编辑界面并且分标明细不为空时才展示以下按钮 -->
+        <div class="table-operations" v-if="pageType == 1 && divideTenderDataLength != 0">
+          <a-button 
+            type="primary"
+            @click="fnAddProduct"> 
+            关联产品 
+          </a-button>
+          <a-popconfirm 
+            :disabled="deleteTitleType == 0"
+            title="确定批量删除?" 
+            @confirm="fnDeleteProduct(1)">
+            <a-button type="primary" @click="fnDeleteProduct(2)"> 
+              <i :class="['iconfont', 'icon-weibiaoti544']"></i>
+              批量删除 
+            </a-button>
+          </a-popconfirm>
+          <a-button type="primary" @click="handleSubmit"> 
+            <i :class="['iconfont', 'icon-baocun']"></i>
+            保存 
+          </a-button>
+        </div>
+      </Heading>
+      <div class="table-wrapper">
+        <a-form 
+          :form="form"
+          @submit="handleSubmit">
+          <a-table
+            bordered
+            size="small"
+            class="es-table"
+            rowKey="subtenderDetailId"
+            :loading="pageData.loading"
+            :pagination=false
+            :columns="columns"
+            :dataSource="dataSource"
+            :scroll="{ x: true }"
+            :rowSelection="pageType == 0 ? null : {
+              fixed: true,
+              selectedRowKeys: selectedRowKeys,
+              onChange: onSelectChange,
+            }">
+            <template slot="amount" slot-scope="text, record, index">
+              <a-form-item v-if="pageType == 1">
+                <a-input
+                  allowClear
+                  type="number"
+                  style="margin: -5px 0; width: 100%"
+                  v-decorator="[
+                    `amount${index}`, 
+                    {
+                      rules: [{ required: true, validator: fnCheckNumber }],
+                      validateTrigger: ['blur'],
+                      initialValue: text
+                    }
+                  ]"
+                  placeholder="请输入需求数量"
+                  @focus="(e) => fnFocus(e, record)"
+                  @change="(e) => 
+                    fnHandleChange(
+                      e.target.value,
+                      record.subtenderDetailId,
+                      'amount')"
+                />
+              </a-form-item>
+              <p v-else>{{text}}</p>
+            </template>
+            <template slot="action" slot-scope="record">
+              <a-popconfirm 
+                title="确定删除?" 
+                @confirm="fnDeleteProduct(0, record.subtenderDetailId)">
+                <a>删除</a>
+              </a-popconfirm>
+            </template>
+          </a-table>
+        </a-form>
+      </div>
+      <!-- 编辑界面不展示分页，显示全部的数据 -->
+      <pagination
+        v-if="pageType == 0"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange">
+      </pagination>
+    </a-card>
+    <a-modal
+      v-if="productVisible"
+      v-model="productVisible"
+      title="选择产品"
+      width="80%"
+      :centered=true
+      :maskClosable=false
+      @ok="handleSeleProductOk('product')">
+      <ProductSelect
+        ref="productSele"
+        :param="seleProParam">
+      </ProductSelect>
+    </a-modal>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import { 
+  getProductInfoDataByDivideTender,
+  addProductInfoForDivideTender,
+  updateProductInfoForDivideTender,
+  deleteProductInfoForDivideTender
+} from "@/services/bid";
+export default {
+  name: 'dt-product-info',
+  components: { 
+    Heading: () => import("@/components/heading/Heading"),
+    pagination: () => import("@/components/pagination/Pagination"),
+    ProductSelect: () => import("./ProductSelect")
+  },
+  props: {
+    //0: 详情; 1: 编辑
+    pageType: {
+      type: [Number, String],
+      default: 1
+    },
+    //项目信息
+    projectData: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
+    //分标明细的数量
+    divideTenderDataLength: {
+      type: [String, Number],
+      default: 0
+    },
+    //更新产品信息
+    isUpdateProjectInfo: {
+      type: Boolean,
+      default: false
+    }
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      //弹框选择产品
+      productVisible: false,
+      seleProParam: {},
+      leftAmount: 0,
+      curRecord: {},
+      selectedRowKeys: [],
+      selectedRows: [],
+      targetpage: undefined,
+      filter: {},
+      pageData: {
+        limit: 15,
+        total: 0,
+        page: 1,
+        loading: false,
+      },
+      selectedProd: [],
+      dataSource: [],
+      columns: [],
+      columnsData: [
+        {
+          title: "序号",
+          dataIndex: "number",
+          align: "center",
+          customRender: (text, record, index) => `${index + 1}`,
+          width: 80,
+        },
+        {
+          title: "标名",
+          dataIndex: "subTenderName",
+          // width: 180,
+          align: "center"
+        },
+        {
+          title: "产品编码",
+          dataIndex: "productCode",
+          align: "center"
+        },
+        {
+          title: "产品名称",
+          dataIndex: "productName"
+        },
+        {
+          title: "单位",
+          dataIndex: "measure",
+          align: "center",
+          width: 80,
+        },
+        {
+          title: "总数量",
+          dataIndex: "totalAmount",
+          align: "center",
+        },
+        {
+          title: "需求数量",
+          dataIndex: "amount",
+          align: "center",
+          width: 240,
+          scopedSlots: { customRender: "amount" },
+        },
+        {
+          title: "操作",
+          align: "center",
+          width: 80,
+          scopedSlots: { customRender: "action" }
+        },
+      ]
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    deleteTitleType() {
+      //0: 未选需要快速分标的数据 1: 已选
+      return this.selectedRowKeys.length == 0 ? 0 : 1
+    }
+  },
+  created() {
+   this.fnInit();
+  },
+  watch: {
+    projectData() {
+      this.fnInit();
+    },
+    isUpdateProjectInfo(newData) {
+      newData && this.fnGetData();
+    },
+  },
+  methods: {
+    fnInit() {
+      //详情界面不展示操作列
+      this.columns = [];
+      let arr = [...this.columnsData], index = this.columnsData.length - 1;
+      if (this.pageType == 0) {
+        arr.splice(index, 1);
+      }
+      this.columns = [...arr];
+      this.projectData.projectId && this.fnGetData();
+    },
+    fnGetData() {
+      //编辑界面不展示分页，详情界面才展示
+      let param = Object.assign(
+        {
+          limit: this.pageType == 0 ? this.pageData.limit : 10000,
+          page: this.pageData.page,
+          projectId: this.projectData.projectId,
+          // subtenderId: this.$route.param.id
+        }
+      );
+      this.pageData.loading = true;
+      getProductInfoDataByDivideTender(param).then((res) => {
+        const resData = res.data || {};
+        const responseResult = resData.responseResult || {};
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.selectedProd = [];
+          if (this.dataSource.length != 0) {
+            this.dataSource.forEach((ele) => {
+              this.selectedProd.push(ele.projectDetailId);
+            })
+          }
+          this.pageData.total = Number(total);
+          //获取了数据之后，将父组件的“isUpdateProjectInfo”的值更改为false
+          this.$emit("finish-get-product-info");
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    //添加产品
+    fnAddProduct() {
+      this.productVisible = true;
+      this.seleProParam = {
+        subtenderId: this.$route.params.id,
+        projectId: this.projectData.projectId,
+        selectedProd: this.selectedProd
+      }
+    },
+    handleSeleProductOk() {
+      const data = this.$refs.productSele.getRes();
+      if (!data.subtenderId) {
+        this.$message.warning('请先选择标, 再选择对应的产品。');
+        return;
+      }
+      if (data.selectedRowKeys.length == 0) {
+        this.$message.warning('请先选择产品。');
+        return;
+      }
+      let param = {
+        projectId: this.projectData.projectId,
+        subIds: data.selectedRowKeys.join(',')
+      }
+      addProductInfoForDivideTender(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          //this.$message.success('新增成功');
+          this.fnGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+      this.productVisible = false;
+    },
+    //单个(type: 0)/批量(type: 1)删除产品明细
+    fnDeleteProduct(type, id) {
+      console.log(this.deleteTitleType);
+      if (type == 2 && this.deleteTitleType == 0) {
+        this.$message.warning("请选择要删除的数据！");
+        return;
+      }
+      if (type == 2) return;
+      let ids = (type == 1) ? this.selectedRowKeys.join(',') : id;
+      deleteProductInfoForDivideTender(ids).then(res => {
+        const resData = res.data || {};
+        if (resData.errCode == "0000") {
+          this.$message.success(resData.responseResult || '删除成功', 3);
+          this.fnClearCheckdData();
+          this.fnGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      })
+    },
+    //保存分标明细
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(this.BASE.formScrollOptions, (err) => {
+        if (!err) {
+          updateProductInfoForDivideTender(this.dataSource).then(res => {
+            const resData = res.data || {};
+            if (resData.errCode == "0000") {
+              this.$message.success(resData.responseResult, 3);
+              this.fnGetData();
+            } else {
+              this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+            }
+          })
+        }
+      });
+    },
+    //监听标名的输入
+    fnHandleChange(value, key, column) {
+      const newData = [...this.dataSource];
+      const target = newData.filter(item => key === item.subtenderDetailId)[0];
+      if (target) {
+        let totalAmount = target.totalAmount, 
+          usedAmount = 0;
+        this.dataSource.forEach((ele) => {
+          if (target.productId == ele.productId && ele.subtenderDetailId != target.subtenderDetailId) {
+            usedAmount += Number(ele.amount);
+          }
+        })
+        this.leftAmount = totalAmount - usedAmount;
+        target[column] = value;
+        this.dataSource = newData;
+      }
+    },
+    fnFocus(e, record) {
+      this.curRecord = record;
+    },
+    //校验需求数量
+    fnCheckNumber(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入需求数量");
+        return;
+      }
+      //判断需求数量是否符合要求：整数, 不能为0
+      let reg = this.BASE.reg.mountReg;
+      if (!reg.test(value)) {
+        callback("请输入0.01-999999999999.99的数值！");
+        return;
+      }
+      if (JSON.stringify(this.curRecord) != '{}' && value > this.leftAmount) {
+        callback(`超过总数量限制`);
+        // callback(`超过总数量限制, 最多可填${this.leftAmount}`);
+        return;
+      }
+      this.curRecord = {};
+      callback();
+    },
+    //清空已选复选框
+    fnClearCheckdData() {
+      this.selectedRowKeys = [];
+      this.selectedRows = [];
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.fnGetData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.fnGetData();
+    },
+  },
+};
+</script>
+<style lang="less" scoped>
+  .table-operations {
+    text-align: right;
+    margin: 10px 5px;
+  }
+  .table-operations > button {
+    margin-right: 8px;
+  }
+  .dt-product-info-wrapper {
+    .ant-input {
+      font-size: 0.8rem!important;
+    }
+  }
+</style>

@@ -1,0 +1,282 @@
+<template>
+  <common-layout>
+    <div id="es-login">
+      <div class="top">
+        <div class="header">
+          <img alt="logo" class="logo" src="@/assets/img/login_logo.png" />
+        </div>
+        <div class="desc"></div>
+      </div>
+      <div class="login">
+        <div class="cover"></div>
+        <div class="title">账号登录</div>
+        <a-form @submit="onSubmit" :form="form" class="login-form">
+          <a-form-item>
+            <a-input
+              autocomplete="autocomplete"
+              size="large"
+              placeholder="admin"
+              v-decorator="[
+                'name',
+                {
+                  rules: [
+                    {
+                      required: true,
+                      message: '请输入账户名',
+                      whitespace: true
+                    }
+                  ]
+                }
+              ]"
+            >
+              <i
+                slot="prefix"
+                style="color:#4CB2F6;font-size:22px"
+                class="iconfont icon-denglu-xuanzhong"
+              ></i>
+            </a-input>
+          </a-form-item>
+          <a-form-item>
+            <a-input
+              size="large"
+              placeholder="888888"
+              autocomplete="autocomplete"
+              type="password"
+              v-decorator="[
+                'password',
+                {
+                  rules: [
+                    {
+                      required: true,
+                      message: '请输入密码',
+                      whitespace: true
+                    }
+                  ]
+                }
+              ]"
+            >
+              <i
+                slot="prefix"
+                style="color:#4CB2F6;font-size:22px"
+                class="iconfont icon-zu"
+              ></i>
+            </a-input>
+          </a-form-item>
+          <a-form-item>
+            <a-input
+              size="large"
+              placeholder="请输入验证码"
+              autocomplete="autocomplete"
+              type="text"
+              v-decorator="[
+                'text',
+                {
+                  rules: [
+                    {
+                      message: '请输入验证码',
+                      whitespace: true
+                    }
+                  ]
+                }
+              ]"
+            >
+              <i
+                style="color:#4CB2F6;font-size:22px"
+                slot="prefix"
+                class="iconfont icon-securityCode-b"
+              ></i>
+            </a-input>
+          </a-form-item>
+          <div>
+            <a style="float: right">忘记密码</a>
+          </div>
+          <a-form-item>
+            <a-button
+              :loading="logging"
+              style="width: 100%;margin-top: 24px"
+              size="large"
+              htmlType="submit"
+              type="primary"
+              >登录</a-button
+            >
+          </a-form-item>
+        </a-form>
+      </div>
+    </div>
+  </common-layout>
+</template>
+
+<script>
+import CommonLayout from "@/layouts/CommonLayout";
+import { login, getRoutesConfig } from "@/services/user";
+import { map } from "@/services/basic";
+
+import { setAuthorization } from "@/utils/request";
+import { loadRoutes } from "@/utils/routerUtil";
+import { mapMutations } from "vuex";
+
+export default {
+  name: "Login",
+  components: { CommonLayout },
+  data() {
+    return {
+      logging: false,
+      error: "",
+      form: this.$form.createForm(this)
+    };
+  },
+  methods: {
+    ...mapMutations("account", [
+      "setUser",
+      "setMenu",
+      "setPermissions",
+      "setRoles",
+      "setDictionary"
+    ]),
+    onSubmit(e) {
+      e.preventDefault();
+      this.form.validateFields(err => {
+        if (!err) {
+          this.logging = true;
+          const name = this.form.getFieldValue("name");
+          const password = this.form.getFieldValue("password");
+          login(name, password).then(this.afterLogin);
+        }
+      });
+    },
+    afterLogin(res) {
+      this.logging = false;
+      const loginRes = res;
+      if (loginRes.code >= 0) {
+        // const { user, permissions, roles } = loginRes.data;
+        const { user } = loginRes.data;
+        this.setUser(user);
+        // this.setPermissions(permissions);
+        // this.setRoles(roles);
+        setAuthorization({
+          token: loginRes.token,
+          expireAt: new Date(loginRes.expireAt)
+        });
+        // 获取路由配置
+        getRoutesConfig().then(result => {
+          const routesConfig = result.data;
+          loadRoutes(
+            { router: this.$router, store: this.$store, i18n: this.$i18n },
+            routesConfig
+          );
+          this.$router.push("/bid/prepare/create");
+          this.$message.success(loginRes.message, 3);
+        });
+        // 获取码表
+        map().then(result => {
+          const resData = result.data;
+          if (resData.errCode === "0000") {
+            let arr = {};
+            for (var i in resData.responseResult) {
+              let key = i.split("_");
+              if (!arr[key[0]]) arr[key[0]] = [];
+              arr[key[0]][key[1]] = resData.responseResult[i];
+            }
+            this.setDictionary(arr);
+          } else {
+            this.$error({
+              content: resData.customMess
+            });
+          }
+        });
+      }
+    }
+  }
+};
+</script>
+
+<style lang="less" scoped>
+.common-layout {
+  #es-login {
+    position: absolute;
+    right: 150px;
+    .top {
+      text-align: center;
+      .header {
+        height: 84px;
+        line-height: 84px;
+        a {
+          text-decoration: none;
+        }
+        .logo {
+          width: 470px;
+          vertical-align: top;
+        }
+        .title {
+          font-size: 33px;
+          color: @title-color;
+          font-family: "Myriad Pro", "Helvetica Neue", Arial, Helvetica,
+            sans-serif;
+          font-weight: 600;
+          position: relative;
+          top: 2px;
+        }
+      }
+      .desc {
+        font-size: 14px;
+        color: @text-color-second;
+        margin-top: 12px;
+        margin-bottom: 40px;
+      }
+    }
+    .login {
+      width: 410px;
+      height: 420px;
+      background: #fff;
+      margin: 0 auto;
+      text-align: center;
+      border: 2px solid #004ac3;
+      position: relative;
+      z-index: 1000;
+      .cover {
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        bottom: -8px;
+        right: -8px;
+        z-index: -100;
+        background: #ffffff50;
+        border: 2px solid #1e70c430;
+      }
+      .title {
+        color: #3695f6;
+        font-size: 20px;
+        padding: 35px 0;
+      }
+      .login-form {
+        padding: 0 60px;
+        z-index: 1000;
+        /deep/.ant-input:not(:first-child) {
+          padding-left: 37px;
+        }
+      }
+      // @media screen and (max-width: 576px) {
+      //   width: 95%;
+      // }
+      // @media screen and (max-width: 320px) {
+      //   .captcha-button {
+      //     font-size: 14px;
+      //   }
+      // }
+
+      .icon {
+        font-size: 24px;
+        color: @text-color-second;
+        margin-left: 16px;
+        vertical-align: middle;
+        cursor: pointer;
+        transition: color 0.3s;
+
+        &:hover {
+          color: @primary-color;
+        }
+      }
+    }
+  }
+}
+</style>

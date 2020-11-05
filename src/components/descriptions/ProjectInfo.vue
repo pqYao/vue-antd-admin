@@ -1,0 +1,100 @@
+<template>
+  <div class="project-info-des-wrapper">
+    <a-card>
+      <Heading name="项目信息"></Heading>
+      <Descriptions 
+        :list="labelList" 
+        :param="projectData" 
+        :jumpData="jumpData"> 
+      </Descriptions>
+    </a-card>
+  </div>
+</template>
+<script>
+export default {
+  name: "project-info-des",
+  props: {
+    projectData: {
+      type: Object,
+      default() {
+        return {}
+      }
+    },
+    url: {
+      type: String,
+      default: ""
+    },
+    purchaseTypeKey: {
+      type: String,
+      default: "purchaseType"
+    }
+  },
+  components: {
+    Heading: () => import("@/components/heading/Heading"),
+    Descriptions: () => import("@/components/descriptions/Description")
+  },
+  data() {
+    return {
+      jumpData: {},
+      labelList: [
+        {
+          label: "项目编号",
+          key: "projectCode",
+          show: true,
+          jump: true
+        },
+        {
+          label: "项目名称",
+          key: "projectName",
+          show: true,
+        },
+        {
+          label: "采购方式",
+          key: "purchaseType",
+          show: true,
+          pt: true
+        },
+        { 
+          label: "是否委托", 
+          key: "entrustFlag", 
+          flag: true, 
+          show: true 
+        },
+        {
+          label: "是否资格预审",
+          key: "prequalficationFlag",
+          flag: true, 
+          show: true,
+        },
+        // { 
+        //   label: "代理机构名称", 
+        //   key: "agencyOrgName",
+        //   show: false 
+        // }
+      ]
+    };
+  },
+  created() {
+    this.fnInit();
+  },
+  watch: {
+    projectData() {
+      this.fnInit();
+    },
+    purchaseTypeKey() {
+      this.fnInit();
+    }
+  },
+  methods: {
+    fnInit() {
+      this.jumpData = {
+        projectCode: {
+          url: `${this.url}/${this.projectData.projectId}`
+        }
+      }
+      this.labelList[2].key = this.purchaseTypeKey;
+      // this.labelList[5].show = (this.projectData.entrustFlag == 1) ? true : false;
+    }
+  }
+};
+</script>

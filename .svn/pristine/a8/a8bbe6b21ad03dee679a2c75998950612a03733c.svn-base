@@ -1,0 +1,371 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="产品明细" v-if="isDetail"></Heading>
+      <Heading name="产品明细" v-else>
+        <template v-if="show">
+          <a-button type="primary" @click="handleAdd('product')"
+            >关联产品</a-button
+          >
+          <a-popconfirm
+            :disabled="!this.hasSelectedRowKeys"
+            title="确定批量删除?"
+            ok-text="确认"
+            cancel-text="取消"
+            @confirm="handleDelete"
+          >
+            <a-button type="primary" @click="handleDelete(0)">
+              <i :class="['iconfont', 'icon-weibiaoti544']"></i>
+              批量删除
+            </a-button>
+          </a-popconfirm>
+          <a-button type="primary" @click="handleSubmit">
+            <i :class="['iconfont', 'icon-baocun']" :disabled="isConnect"></i>
+            保存
+          </a-button>
+        </template>
+      </Heading>
+
+      <a-table
+        v-if="show"
+        class="es-table"
+        size="small"
+        :bordered="true"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        rowKey="projectDetailId"
+        :rowSelection="
+          isDetail
+            ? null
+            : {
+                fixed: true,
+                selectedRowKeys: selectedRowKeys,
+                onChange: onSelectChange
+              }
+        "
+        :scroll="{ x: true }"
+      >
+        <template slot="requirementAmout" slot-scope="text, record, index">
+          <a-form v-if="!isDetail" :form="form" @submit="handleSubmit">
+            <a-form-item>
+              <a-input
+                allowClear
+                v-decorator="[
+                  `requirementAmout${index}`,
+                  {
+                    validateTrigger: ['blur'],
+                    rules: [{ required: true, validator: checkAmount }],
+                    initialValue: text
+                  }
+                ]"
+                @change="
+                  e =>
+                    onCellChange(
+                      e.target.value,
+                      record.projectDetailId,
+                      'requirementAmout'
+                    )
+                "
+                style="margin: -5px 0;width:100%"
+              />
+            </a-form-item>
+          </a-form>
+          <span v-else>{{ text }}</span>
+        </template>
+
+        <template slot="action" slot-scope="record">
+          <a-popconfirm
+            title="是否确认删除所选行?"
+            ok-text="确认"
+            cancel-text="取消"
+            @confirm="deleteById(record.projectDetailId)"
+          >
+            <a style="margin-right: 8px">删除</a>
+          </a-popconfirm>
+        </template>
+      </a-table>
+      <pagination
+        v-if="show && this.isDetail"
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+    <a-modal
+      title="选择产品"
+      width="80%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="productVisible"
+      v-model="productVisible"
+      @ok="handleOk('product')"
+    >
+      <ProductSelect
+        :projectId="baseData.projectId"
+        ref="product"
+      ></ProductSelect>
+    </a-modal>
+  </div>
+</template>
+
+<script>
+import Heading from "@/components/heading/Heading";
+import {
+  findProductInfoByPage,
+  deleteProductInfo,
+  addProductInfo,
+  updateProductInfo
+} from "@/services/bid";
+import Pagination from "@/components/pagination/Pagination";
+import ProductSelect from "@/components/table/ProductSelect";
+
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    width: 80,
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`
+  },
+  {
+    title: "产品编码",
+    dataIndex: "productCode",
+    align: "center"
+  },
+  {
+    title: "产品名称",
+    dataIndex: "productName"
+  },
+  {
+    title: "单位",
+    dataIndex: "productUnit",
+    align: "center"
+  },
+  {
+    title: "需求数量",
+    dataIndex: "requirementAmout",
+    scopedSlots: { customRender: "requirementAmout" },
+    align: "center"
+  },
+  {
+    title: "操作",
+    align: "center",
+    scopedSlots: { customRender: "action" },
+    fixed: "right",
+    width: 80
+  }
+];
+
+const dataSource = [];
+
+export default {
+  name: "QueryList",
+  components: { Heading, Pagination, ProductSelect },
+  props: {
+    isDetail: {
+      type: Boolean,
+      default: false
+    },
+    baseData: {
+      type: Object
+    }
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      columns: columns,
+      dataSource: dataSource,
+      selectedRowKeys: [],
+      selectedRows: [],
+      show: false,
+      isConnect: false,
+      productVisible: false,
+      pageData: pageData
+    };
+  },
+  computed: {
+    hasSelectedRowKeys() {
+      return !!this.selectedRowKeys.length == 0 ? false : true;
+    }
+  },
+  watch: {
+    baseData: {
+      handler(val) {
+        this.show = !this.BASE.ObjectIsNull(this.baseData);
+        if (this.show) {
+          this.getData();
+        }
+        return val;
+      },
+      immediate: true,
+      deep: true
+    },
+    dataSource: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    },
+    isDetail: {
+      handler(val) {
+        if (val) {
+          const newColumns = [...this.columns];
+          delete newColumns[5];
+          this.columns = newColumns;
+        }
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  created() {
+    this.isDetail && this.getData();
+  },
+  methods: {
+    getData() {
+      let param = Object.assign(
+        {
+          limit: this.isDetail ? this.pageData.limit : 10000,
+          page: this.pageData.page,
+          projectId: this.baseData.projectId
+        },
+        this.filter
+      );
+      this.pageData.loading = true;
+      this.dataSource = [];
+      findProductInfoByPage(param).then(res => {
+        const resData = res.data || {};
+        const responseResult = resData.responseResult || {};
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    handleAdd(key) {
+      this[`${key}Visible`] = true;
+    },
+    handleOk(key) {
+      const data = this.$refs[key].getRes();
+      addProductInfo(data.join(","), this.baseData.projectId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult, 3);
+          this.getData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+      this[`${key}Visible`] = false;
+    },
+    checkAmount(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入需求数量");
+        return;
+      }
+      let reg = this.BASE.reg.mountReg;
+      if (!reg.test(value)) {
+        callback("请输入正确的数量");
+      }
+      callback();
+    },
+    onCellChange(value, key, column) {
+      const newData = [...this.dataSource];
+      const target = newData.filter(item => key === item.projectDetailId)[0];
+      if (target) {
+        target[column] = value;
+        this.dataSource = newData;
+      }
+    },
+    handleSubmit(e) {
+      e.preventDefault(e);
+      this.form.validateFieldsAndScroll(this.BASE.formScrollOptions, error => {
+        if (error) {
+          return;
+        }
+        this.isConnect = true;
+        this.updateInfo();
+      });
+    },
+    // 更新
+    updateInfo() {
+      updateProductInfo(this.dataSource).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          this.getData();
+          this.$message.success(resData.responseResult, 3);
+          this.isConnect = false;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    onSelectChange(data, row) {
+      this.selectedRowKeys = data;
+      this.selectedRows = row;
+    },
+    handleDelete(type) {
+      if (!this.hasSelectedRowKeys) {
+        this.$message.warning("请至少选择一条数据进行删除！");
+        return false;
+      }
+      if (type == 0) {
+        return;
+      }
+      this.deleteById();
+    },
+    // 删除
+    deleteById(id) {
+      let projectDetailIds = id || this.selectedRowKeys.join(",");
+      deleteProductInfo(projectDetailIds).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.warning(responseResult);
+          this.selectedRowKeys = [];
+          this.getData();
+        }
+      });
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    }
+  }
+};
+</script>

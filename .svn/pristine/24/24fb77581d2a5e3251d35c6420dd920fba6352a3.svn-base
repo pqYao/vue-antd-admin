@@ -1,0 +1,330 @@
+<template>
+  <a-card>
+    <Heading name="招标时间设置">
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        选择供应商
+      </a-button>
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+
+    <a-form
+      layout="horizontal"
+      :form="form"
+      class="es-form"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="标书售卖开始时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              style="width:100%;"
+              v-decorator="[
+                'requestOutstockDate',
+                {
+                  initialValue: formData.requestOutstockDate
+                    ? moment(formData.requestOutstockDate, 'YYYY-MM-DD')
+                    : moment(new Date())
+                }
+              ]"
+              format="YYYY-MM-DD"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="标书售卖截止时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              style="width:100%;"
+              v-decorator="[
+                'requestOutstockDate',
+                {
+                  initialValue: formData.requestOutstockDate
+                    ? moment(formData.requestOutstockDate, 'YYYY-MM-DD')
+                    : moment(new Date())
+                }
+              ]"
+              format="YYYY-MM-DD"
+            />
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24">
+          <a-form-item label="售卖天数" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-model="formData.predictTax"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="投标截止时间" v-bind="BASE.oneItemLayout">
+            <a-date-picker
+              style="width:100%;"
+              v-decorator="[
+                'requestOutstockDate',
+                {
+                  initialValue: formData.requestOutstockDate
+                    ? moment(formData.requestOutstockDate, 'YYYY-MM-DD')
+                    : moment(new Date())
+                }
+              ]"
+              format="YYYY-MM-DD"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="开标地点" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-decorator="[
+                `predictTax`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.predictTax,
+                  rules: [{ required: true, validator: validMoney }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24">
+          <a-form-item label="投标天数" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-model="formData.predictTax"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import moment from "moment";
+import Heading from "@/components/heading/Heading";
+import {
+  addProjectInfo,
+  findProjectInfoById,
+  updateProjectInfo,
+  validateProjectName
+} from "@/services/bid";
+
+export default {
+  name: "edit",
+  components: {
+    Heading
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      projectId: "",
+      isConnect: false,
+      // 弹窗
+      requirementNameVisible: false,
+      agencyOrgNameVisible: false,
+      agencyOrgManegerNameVisible: false
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+    this.handleInit();
+  },
+  watch: {
+    formData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    moment,
+    handleInit() {
+      if (this.$route.params.id) {
+        this.projectId = this.$route.params.id;
+        this.findProjectInfo();
+      } else {
+        this.formData.projectYear = new Date().getFullYear();
+      }
+    },
+    findProjectInfo() {
+      findProjectInfoById(this.projectId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult;
+          this.$emit("send-data", this.formData);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(
+        this.BASE.formScrollOptions,
+        (error, values) => {
+          if (error) {
+            return;
+          }
+          for (let i in values) {
+            this.formData[i] = values[i];
+          }
+          this.isConnect = true;
+          if (this.projectId) {
+            this.updateInfo();
+          } else {
+            this.addNew();
+          }
+        }
+      );
+    },
+    // 新增
+    addNew() {
+      addProjectInfo(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.projectId = responseResult.projectId;
+          this.$message.success("新增成功", 3);
+          this.findProjectInfo();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 更新
+    updateInfo() {
+      updateProjectInfo(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.projectId = responseResult.projectId;
+          this.$message.success("更新成功", 3);
+          this.findProjectInfo();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 采购项目校验
+    checkProject(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入采购项目名称");
+        return;
+      }
+      validateProjectName(this.projectId || "", value).then(res => {
+        const resData = res.data;
+        let customMess = "";
+        if (resData.errCode !== "0000") {
+          customMess = resData.customMess;
+          callback(customMess);
+        } else {
+          callback();
+        }
+      });
+    },
+    // 表单赋值
+    setVal(obj) {
+      for (let i in obj) {
+        this.formData[i] = obj[i];
+        let val = this.form.getFieldsValue();
+        for (let j in val) {
+          if (i == j) {
+            this.form.setFieldsValue({
+              [i]: obj[i]
+            });
+          }
+        }
+      }
+    },
+    // 验证金额
+    validMoney(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入金额");
+        return;
+      }
+      let reg = this.BASE.reg.moneyReg;
+      if (!reg.test(value)) {
+        callback("请输入正确的金额");
+      }
+      callback();
+    },
+    // 采购方式选择改变
+    purchaseTypeChange(value) {
+      this.formData.purchaseType = value;
+      if (value === "1") {
+        this.formData.prequalficationFlag = "";
+      }
+    },
+    // 是否委托选择改变
+    entrustFlagChange(value) {
+      this.formData.entrustFlag = value;
+    },
+    // 弹窗选择
+    onSearch(key) {
+      this[`${key}Visible`] = true;
+    },
+    handleOk(key) {
+      const data = this.$refs[key].getRes();
+      if (key === "requirementName") {
+        if (!this.BASE.CheckIsNullOrEmpty(data.key)) {
+          this.$message.warning("请先选择需求单位/部门！");
+        } else {
+          this.setVal({
+            requirementName: data.name,
+            requirementId: data.key
+          });
+        }
+      }
+      if (key === "agencyOrgName") {
+        if (this.BASE.ObjectIsNull(data)) {
+          this.$message.warning("请先选择招标代理机构！");
+        } else {
+          this.setVal({
+            agencyOrgName: data.vendorName,
+            agencyOrgId: data.vendorId,
+            agencyOrgManegerName: "",
+            agencyOrgManegerId: ""
+          });
+        }
+      }
+      if (key === "agencyOrgManegerName") {
+        if (this.BASE.ObjectIsNull(data)) {
+          this.$message.warning("请先选择代理机构项目经理！");
+        } else {
+          this.setVal({
+            agencyOrgManegerName: data.realName,
+            agencyOrgManegerId: data.userId
+          });
+        }
+      }
+      this[`${key}Visible`] = false;
+    }
+  }
+};
+</script>

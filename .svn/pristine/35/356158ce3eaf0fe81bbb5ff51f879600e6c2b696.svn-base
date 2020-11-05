@@ -1,0 +1,661 @@
+<template>
+  <a-card>
+    <Heading name="基本信息">
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+
+    <a-form
+      layout="horizontal"
+      :form="form"
+      class="es-form"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="采购项目编号" v-bind="BASE.oneItemLayout">
+            <a-input
+              disabled
+              v-decorator="[
+                `projectCode`,
+                {
+                  initialValue: formData.projectCode || ''
+                }
+              ]"
+              placeholder="保存后自动生成"
+              allowClear
+            >
+            </a-input>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="项目所属年份" v-bind="BASE.oneItemLayout">
+            <a-select
+              v-decorator="[
+                `projectYear`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.projectYear,
+                  rules: [{ required: true, message: '请选择项目所属年份' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option :value="`${new Date().getFullYear() - 1}`">{{
+                new Date().getFullYear() - 1
+              }}</a-select-option>
+              <a-select-option :value="`${new Date().getFullYear()}`">
+                {{ new Date().getFullYear() }}
+              </a-select-option>
+              <a-select-option :value="`${new Date().getFullYear() + 1}`">
+                {{ new Date().getFullYear() + 1 }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="采购方式" v-bind="BASE.oneItemLayout">
+            <a-select
+              v-decorator="[
+                `otherPurchaseType`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.otherPurchaseType,
+                  rules: [{ required: true, message: '请选择采购方式' }]
+                }
+              ]"
+              @change="purchaseTypeChange"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option
+                v-for="(m, i) in dictionary.otherPurchaseType"
+                :class="{ 'hide-select-item': !m }"
+                :key="i"
+                :value="`${i}`"
+                >{{ m }}</a-select-option
+              >
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="16" :sm="24">
+          <a-form-item label="采购项目名称" v-bind="BASE.twoItemLayout">
+            <a-input
+              v-decorator="[
+                `projectName`,
+                {
+                  maxLength: 50,
+                  initialValue: formData.projectName,
+                  validateTrigger: ['blur'],
+                  rules: [{ required: true, validator: checkProject }],
+                  getValueFromEvent: event => {
+                    return event.target.value.replace(/[`\\|,|'`]/g, '');
+                  }
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24" v-if="formData.otherPurchaseType == '9'">
+          <a-form-item label="单一来源场景" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-decorator="[
+                `singleSourceScene`,
+                {
+                  maxLength: 50,
+                  validateTrigger: ['blur'],
+                  initialValue: formData.singleSourceScene,
+                  rules: [{ required: true, message: '请选择单一来源场景' }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="物资类型" v-bind="BASE.oneItemLayout">
+            <a-select
+              v-decorator="[
+                `materialType`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.materialType,
+                  rules: [{ required: true, message: '请选择物资类型' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option
+                v-for="(m, i) in dictionary.materialType"
+                :class="{ 'hide-select-item': !m }"
+                :key="i"
+                :value="`${i}`"
+                >{{ m }}</a-select-option
+              >
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="需求单位/部门" v-bind="BASE.oneItemLayout">
+            <a-input
+              @click="onSearch('requirementName')"
+              v-decorator="[
+                'requirementName',
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.requirementName,
+                  rules: [{ required: true, message: '请选择需求单位/部门' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-icon
+                slot="suffix"
+                type="search"
+                @click="onSearch('requirementName')"
+              />
+            </a-input>
+          </a-form-item>
+        </a-col>
+
+        <a-col :md="8" :sm="24">
+          <a-form-item label="开支类型" v-bind="BASE.oneItemLayout">
+            <a-select
+              v-decorator="[
+                `expenditureType`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.expenditureType,
+                  rules: [{ required: true, message: '请选择开支类型' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option
+                v-for="(m, i) in dictionary.expenditureType"
+                :class="{ 'hide-select-item': !m }"
+                :key="i"
+                :value="`${i}`"
+                >{{ m }}</a-select-option
+              >
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="估算金额(不含税/元)" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-decorator="[
+                `predictTaxFree`,
+                {
+                  initialValue: formData.predictTaxFree,
+                  validateTrigger: ['blur'],
+                  rules: [{ required: true, validator: validMoney }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="估算金额(含税/元)" v-bind="BASE.oneItemLayout">
+            <a-input
+              v-decorator="[
+                `predictTax`,
+                {
+                  initialValue: formData.predictTax,
+                  validateTrigger: ['blur'],
+                  rules: [{ required: true, validator: validMoney }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+
+        <a-col
+          :md="8"
+          :sm="24"
+          v-if="
+            formData.otherPurchaseType == '5' ||
+              formData.otherPurchaseType == '7'
+          "
+        >
+          <a-form-item label="是否资格预审" v-bind="BASE.oneItemLayout">
+            <a-select
+              v-decorator="[
+                `prequalficationFlag`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.prequalficationFlag,
+                  rules: [{ required: true, message: '请选择是否资格预审' }]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+            >
+              <a-select-option value="1">是</a-select-option>
+              <a-select-option value="0">否</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="是否委托" v-bind="BASE.oneItemLayout">
+            <a-select
+              v-decorator="[
+                `entrustFlag`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.entrustFlag,
+                  rules: [
+                    {
+                      required: true,
+                      message: '请选择是否委托'
+                    }
+                  ]
+                }
+              ]"
+              placeholder="请选择"
+              allowClear
+              @change="entrustFlagChange"
+            >
+              <a-select-option value="1">是</a-select-option>
+              <a-select-option value="0">否</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24" v-if="formData.entrustFlag === '1'">
+          <a-form-item label="代理机构名称" v-bind="BASE.oneItemLayout">
+            <a-input
+              @click="onSearch('agencyOrgName')"
+              v-decorator="[
+                `agencyOrgName`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.agencyOrgName,
+                  rules: [{ required: true, message: '请选择代理机构名称' }]
+                }
+              ]"
+              placeholder="请选择"
+            >
+              <a-icon
+                slot="suffix"
+                type="search"
+                @click="onSearch('agencyOrgName')"
+              />
+            </a-input>
+          </a-form-item>
+        </a-col>
+
+        <a-col
+          :md="8"
+          :sm="24"
+          v-if="formData.entrustFlag === '1' && !!formData.agencyOrgName"
+        >
+          <a-form-item label="代理机构项目经理" v-bind="BASE.oneItemLayout">
+            <a-input
+              @click="onSearch('agencyOrgManegerName')"
+              v-decorator="[
+                `agencyOrgManegerName`,
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.agencyOrgManegerName,
+                  rules: [{ required: true, message: '请选择代理机构项目经理' }]
+                }
+              ]"
+              placeholder="请选择"
+            >
+              <a-icon
+                slot="suffix"
+                type="search"
+                @click="onSearch('agencyOrgManegerName')"
+              />
+            </a-input>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="创建部门" v-bind="BASE.oneItemLayout">
+            <a-input
+              disabled
+              v-model="formData.createUnitName"
+              placeholder="保存后自动生成"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="创建时间" v-bind="BASE.oneItemLayout">
+            <a-input
+              disabled
+              v-model="formData.createDate"
+              placeholder="保存后自动生成"
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :md="8" :sm="24">
+          <a-form-item label="项目经理" v-bind="BASE.oneItemLayout">
+            <a-input
+              disabled
+              v-model="formData.createName"
+              placeholder="保存后自动生成"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="采购回避事项说明" v-bind="BASE.threeItemLayout">
+            <a-radio-group
+              v-decorator="[
+                'projectAvoid',
+                {
+                  validateTrigger: ['blur'],
+                  initialValue: formData.projectAvoid,
+                  rules: [{ required: true, message: '请选择采购回避事项说明' }]
+                }
+              ]"
+            >
+              <a-radio
+                :class="{ 'hide-select-item': !m }"
+                v-for="(m, i) in dictionary.projectAvoid"
+                :style="BASE.radioStyle"
+                :key="i"
+                :value="`${i}`"
+                >{{ m }}</a-radio
+              >
+            </a-radio-group>
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+    <a-modal
+      title="选择需求单位/部门"
+      width="30%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="requirementNameVisible"
+      v-model="requirementNameVisible"
+      @ok="handleOk('requirementName')"
+    >
+      <DeptSelect ref="requirementName"></DeptSelect>
+    </a-modal>
+    <a-modal
+      title="选择代理机构名称"
+      width="80%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="agencyOrgNameVisible"
+      v-model="agencyOrgNameVisible"
+      @ok="handleOk('agencyOrgName')"
+    >
+      <AgencyOrgSelect ref="agencyOrgName"></AgencyOrgSelect>
+    </a-modal>
+    <a-modal
+      title="选择代理机构项目经理"
+      width="80%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="agencyOrgManegerNameVisible"
+      v-model="agencyOrgManegerNameVisible"
+      @ok="handleOk('agencyOrgManegerName')"
+    >
+      <AgencyOrgManegerSelect
+        :vendorId="formData.agencyOrgId"
+        ref="agencyOrgManegerName"
+      ></AgencyOrgManegerSelect>
+    </a-modal>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import AgencyOrgSelect from "@/components/table/AgencyOrgSelect";
+import DeptSelect from "@/components/table/DeptSelect";
+import AgencyOrgManegerSelect from "./AgencyOrgManegerSelect";
+import {
+  addProjectInfo,
+  findProjectInfoById,
+  updateProjectInfo,
+  validateProjectName
+} from "@/services/other";
+
+export default {
+  name: "edit",
+  components: {
+    Heading,
+    DeptSelect,
+    AgencyOrgSelect,
+    AgencyOrgManegerSelect
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      projectId: "",
+      isConnect: false,
+      // 弹窗
+      requirementNameVisible: false,
+      agencyOrgNameVisible: false,
+      agencyOrgManegerNameVisible: false
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+    this.handleInit();
+  },
+  watch: {
+    formData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    handleInit() {
+      if (this.$route.params.id) {
+        this.projectId = this.$route.params.id;
+        this.findProjectInfo();
+      } else {
+        this.formData.projectYear = new Date().getFullYear();
+      }
+    },
+    findProjectInfo() {
+      findProjectInfoById(this.projectId).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult;
+          this.$emit("send-data", this.formData);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(
+        this.BASE.formScrollOptions,
+        (error, values) => {
+          if (error) {
+            return;
+          }
+          for (let i in values) {
+            this.formData[i] = values[i];
+          }
+          this.isConnect = true;
+          if (this.projectId) {
+            this.updateInfo();
+          } else {
+            this.addNew();
+          }
+        }
+      );
+    },
+    // 新增
+    addNew() {
+      addProjectInfo(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.projectId = responseResult.projectId;
+          this.$message.success("新增成功", 3);
+          this.findProjectInfo();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 更新
+    updateInfo() {
+      updateProjectInfo(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.projectId = responseResult.projectId;
+          this.$message.success("更新成功", 3);
+          this.findProjectInfo();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 采购项目校验
+    checkProject(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入采购项目名称");
+        return;
+      }
+      validateProjectName(this.projectId || "", value).then(res => {
+        const resData = res.data;
+        let customMess = "";
+        if (resData.errCode !== "0000") {
+          customMess = resData.customMess;
+          callback(customMess);
+        } else {
+          callback();
+        }
+      });
+    },
+    // 表单赋值
+    setVal(obj) {
+      for (let i in obj) {
+        this.formData[i] = obj[i];
+        let val = this.form.getFieldsValue();
+        for (let j in val) {
+          if (i == j) {
+            this.form.setFieldsValue({
+              [i]: obj[i]
+            });
+          }
+        }
+      }
+    },
+    // 验证金额
+    validMoney(rule, value, callback) {
+      if (!this.BASE.CheckIsNullOrEmpty(value)) {
+        callback("请输入金额");
+        return;
+      }
+      let reg = this.BASE.reg.moneyReg;
+      if (!reg.test(value)) {
+        callback("请输入正确的金额");
+      }
+      callback();
+    },
+    // 验证数量
+    validMount(rule, value, callback) {
+      let reg = this.BASE.reg.mountReg;
+      if (!reg.test(value)) {
+        callback("请输入0.01-999999999999.99的数值！");
+      }
+      callback();
+    },
+    // 采购方式选择改变
+    purchaseTypeChange(value) {
+      this.formData.otherPurchaseType = value;
+      if (value == "5" || value == "7") {
+        this.formData.prequalficationFlag = "";
+      }
+    },
+    // 是否委托选择改变
+    entrustFlagChange(value) {
+      this.formData.entrustFlag = value;
+    },
+    // 弹窗选择
+    onSearch(key) {
+      this[`${key}Visible`] = true;
+    },
+    handleOk(key) {
+      const data = this.$refs[key].getRes();
+      if (key === "requirementName") {
+        if (!this.BASE.CheckIsNullOrEmpty(data.key)) {
+          this.$message.warning("请先选择需求单位/部门！");
+        } else {
+          this.setVal({
+            requirementName: data.name,
+            requirementId: data.key
+          });
+        }
+      }
+      if (key === "agencyOrgName") {
+        if (this.BASE.ObjectIsNull(data)) {
+          this.$message.warning("请先选择招标代理机构！");
+        } else {
+          this.setVal({
+            agencyOrgName: data.vendorName,
+            agencyOrgId: data.vendorId,
+            agencyOrgManegerName: "",
+            agencyOrgManegerId: ""
+          });
+        }
+      }
+      if (key === "agencyOrgManegerName") {
+        if (this.BASE.ObjectIsNull(data)) {
+          this.$message.warning("请先选择代理机构项目经理！");
+        } else {
+          this.setVal({
+            agencyOrgManegerName: data.realName,
+            agencyOrgManegerId: data.userId
+          });
+        }
+      }
+      this[`${key}Visible`] = false;
+    }
+  }
+};
+</script>

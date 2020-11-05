@@ -1,0 +1,247 @@
+.es-card {
+  margin: 0 0 10px 0;
+  padding: 3px 13px 4px;
+  background: #FFFFFF;
+}
+
+.es-form-bk {
+  background: @form-background-color;
+}
+
+.ant-card {
+  margin: 0 0 10px 0 !important;
+  box-shadow: 1px 5px 5px 0px rgba(220, 227, 235, 0.2) !important;
+
+  .ant-card-body {
+    padding: 3px 13px 4px !important;
+  }
+}
+
+.ant-modal-error {
+  .ant-modal {
+    height: unset;
+
+    .ant-modal-content {
+      border-top: 3px solid #5498FF;
+      height: unset;
+
+      .ant-modal-body {
+        padding: 32px 32px 24px;
+        height: unset;
+        background: unset;
+        overflow-y: unset;
+      }
+    }
+  }
+}
+
+.ant-modal {
+  height: 80%;
+
+  .ant-modal-content {
+    height: 100%;
+
+    .ant-modal-body {
+      height: calc(100% - 110px);
+      overflow-y: scroll;
+    }
+  }
+}
+
+.ant-modal-content .ant-modal-body {
+  background: #edf2f8;
+  padding: 10px 24px;
+
+  .ant-card {
+    margin-left: 10px;
+    // margin-bottom: 0;
+  }
+}
+
+
+/deep/.ant-btn-primary:hover,
+/deep/.ant-btn-primary:focus {
+  border-color: #2ec810;
+  color: #fff;
+  background: #2ec810;
+}
+
+/deep/.ant-btn-primary:hover .iconfont,
+/deep/.ant-btn-primary:focus .iconfont {
+  color: #fff;
+}
+
+.ant-back-top-inner {
+  text-align: center;
+  background: #FFFFFF;
+  box-shadow: 0px 5px 5px 0px rgba(219, 227, 235, 0.2);
+  color: #007BFF;
+
+  .top {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 400;
+    color: #007BFF;
+    line-height: 18px;
+  }
+}
+
+.es-form-small {
+  padding-top: 0px;
+
+  .ant-form-item {
+    margin-bottom: 0px;
+    margin-top: 0px;
+  }
+}
+
+.es-form {
+  padding-top: 8px;
+
+  .ant-form-item {
+    margin-bottom: 5px;
+    margin-top: 5px;
+
+    .ant-form-item-label {
+      line-height: unset;
+
+      label {
+        white-space: normal;
+        vertical-align: sub;
+        vertical-align: -webkit-baseline-middle;
+        vertical-align: -moz-middle-with-baseline;
+        display: inline-block;
+      }
+    }
+  }
+
+  .ant-form-explain {
+    position: absolute;
+    font-size: 12px;
+    z-index: 10;
+    margin-top: 5px;
+    padding: 6px 8px;
+    color: #fff !important;
+    text-align: left;
+    text-decoration: none;
+    word-wrap: break-word;
+    background-color: rgba(0, 0, 0, 0.75);
+    border-radius: 4px;
+    -webkit-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .ant-form-explain::before,
+  .ant-form-explain::after {
+    width: 0px;
+    height: 0px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0, 0, 0, 0.75) transparent;
+    position: absolute;
+    content: " ";
+    left: 20px;
+    top: -16px;
+  }
+
+  .ant-form-explain::before {
+    top: -17px;
+    border-color: transparent transparent transparent transparent;
+  }
+
+  /deep/.ant-col-3 {
+    width: 11% !important;
+  }
+
+  /deep/.ant-col-21 {
+    width: 86% !important;
+  }
+}
+
+.es-table {
+  .ant-form-item {
+    margin-bottom: 0px;
+    margin-top: 0px;
+  }
+  
+}
+
+.ant-table-thead > tr > th, .ant-table-tbody > tr > td{
+  padding: 6px 8px!important;
+}
+
+.ant-back-top {
+  bottom: 100px;
+  right: 10px;
+}
+
+.ant-select-dropdown-menu-item.hide-select-item {
+  display: none;
+}
+
+.ant-radio-wrapper.hide-select-item {
+  display: none !important;
+}
+
+.ant-col.hide-select-item {
+  display: none !important;
+}
+
+
+
+.es-table {
+  .ant-table-thead>tr>th {
+    font-weight: bold;
+    text-align: center;
+    color: @gray-1;
+  }
+
+  .ant-form-item-control {
+    line-height: unset;
+  }
+
+  .ant-form-explain {
+    position: absolute;
+    font-size: 12px;
+    margin-top: -50px;
+    padding: 1px 7px;
+    color: #fff !important;
+    text-align: left;
+    text-decoration: none;
+    word-wrap: break-word;
+    background-color: rgba(0, 0, 0, 0.75);
+    border-radius: 4px;
+    -webkit-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    width: max-content;
+  }
+
+  /deep/.ant-form-explain::before,
+  /deep/.ant-form-explain::after {
+    width: 0px;
+    height: 0px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.75) transparent transparent transparent;
+    position: absolute;
+    content: " ";
+    left: 20px;
+    top: 22px;
+  }
+
+  /deep/.ant-form-explain::before {
+    top: -17px;
+    border-color: transparent transparent transparent transparent;
+  }
+}
+
+.explain-info {
+  position: absolute;
+  font-size: 12px;
+  right: 0;
+  bottom: -30px;
+
+  .red {
+    color: #f5222d
+  }
+}

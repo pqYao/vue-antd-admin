@@ -1,0 +1,289 @@
+<template>
+  <a-card>
+    <Heading :name="noticeName">
+      <a-button type="primary" @click="handleClick('case')">
+        选择公告模板
+      </a-button>
+      <a-button type="primary" @click="handlePreview">
+        <i :class="['iconfont', 'icon-yulancopy']"></i>
+        预览
+      </a-button>
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        保存
+      </a-button>
+    </Heading>
+
+    <a-form
+      layout="horizontal"
+      :form="form"
+      class="es-form es-form-bk"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="公告发布媒介" v-bind="BASE.threeItemLayout">
+            <a-checkbox-group
+              style="width:100%"
+              v-decorator="[
+                'pushSystem',
+                {
+                  initialValue: pushSystem,
+                  rules: [{ required: true, message: '请选择公告发布媒介' }]
+                }
+              ]"
+              @change="onChange"
+            >
+              <a-row>
+                <a-col
+                  :span="8"
+                  :class="{ 'hide-select-item': !v }"
+                  v-for="(v, i) in dictionary.pushSystem"
+                  :key="i"
+                >
+                  <a-checkbox :value="`${i}`">{{ v }}</a-checkbox>
+                </a-col>
+              </a-row>
+            </a-checkbox-group>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="16" :sm="24">
+          <a-form-item label="公告标题" v-bind="BASE.twoItemLayout">
+            <a-input
+              v-decorator="[
+                `noticeTitle`,
+                {
+                  maxLength: 50,
+                  initialValue: formData.noticeTitle,
+                  validateTrigger: ['blur'],
+                  rules: [{ required: true, message: '请输入公告标题' }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="公告内容" v-bind="BASE.threeItemLayout">
+            <tinymce
+              v-if="tinymceRefresh"
+              v-model="formData.noticeContext"
+              :height="300"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+
+    <a-modal
+      title="选择模板"
+      width="70%"
+      :centered="true"
+      :maskClosable="false"
+      v-if="caseVisible"
+      v-model="caseVisible"
+      @ok="handleOk('case')"
+    >
+      <notice-case
+        ref="case"
+        :purchaseType="this.purchaseType"
+        templateType="1"
+      ></notice-case>
+    </a-modal>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import Tinymce from "@/components/Tinymce";
+import NoticeCase from "@/components/table/NoticeCaseSelect";
+
+import {
+  findSendTenderNotice,
+  addSendTenderNotice,
+  updateSendTenderNotice
+} from "@/services/bid";
+
+export default {
+  name: "tender-notice",
+  components: { Tinymce, Heading, NoticeCase },
+  props: {
+    noticeName: {
+      type: [String],
+      default: ""
+    },
+    noticeType: {
+      type: [String, Number],
+      default: ""
+    }
+  },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      isConnect: false,
+      tenderNoticeId: "",
+      pushSystem: [],
+      tinymceRefresh: true,
+      // 弹窗
+      caseVisible: false
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"]),
+    tenderVindicateId() {
+      return this.$route.params.id;
+    },
+    projectId() {
+      return this.$route.query.projectId;
+    },
+    purchaseType() {
+      return this.$route.query.purchaseType;
+    }
+  },
+  watch: {
+    pushSystem: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    },
+    formData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  created() {
+    this.handleGetData();
+  },
+  activated() {
+    this.handleGetData();
+  },
+  methods: {
+    //  公告预览
+    handlePreview() {
+      this.$router.push({
+        path: `/notice-preview/${this.formData.tenderVindicateId}`,
+        query: {
+          formData: JSON.stringify(this.formData)
+        }
+      });
+    },
+    // 复选框选择改变
+    onChange(value) {
+      this.formData.pushSystem = value.join(",");
+    },
+    // 弹窗
+    handleClick(type) {
+      this[`${type}Visible`] = true;
+    },
+    handleOk(type) {
+      if (type == "case") {
+        const data = this.$refs[type].getRes();
+        if (!data) {
+          this.$message.warning("请选择模板！");
+          return;
+        }
+        this.formData.noticeContext = "";
+        this.formData.noticeContext = data.content;
+      }
+      this[`${type}Visible`] = false;
+    },
+    // 获取数据
+    handleGetData() {
+      findSendTenderNotice(this.tenderVindicateId, this.noticeType).then(
+        res => {
+          const resData = res.data;
+          if (resData.errCode === "0000") {
+            const { responseResult } = resData;
+            this.formData = responseResult || {};
+            this.pushSystem = this.formData
+              ? this.formData.pushSystem.split(",")
+              : "";
+            this.tinymceRefresh = false;
+            this.$nextTick(() => {
+              this.tinymceRefresh = true;
+            });
+          } else {
+            this.$error({
+              title: "错误提示",
+              content: this.BASE.handleErrorMsg(resData)
+            });
+          }
+        }
+      );
+    },
+    // 保存
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(
+        this.BASE.formScrollOptions,
+        (error, values) => {
+          if (error) {
+            return;
+          }
+          for (let i in values) {
+            if (i != "pushSystem") {
+              this.formData[i] = values[i];
+            }
+          }
+          this.isConnect = true;
+          this.formData.tenderVindicateId = this.tenderVindicateId;
+          this.formData.projectId = this.projectId;
+          // noticeType 1:公告 2:邀请函
+          this.formData.noticeType = 1;
+          if (this.formData.tenderNoticeId) {
+            this.handleUpdate();
+          } else {
+            this.handleAdd();
+          }
+        }
+      );
+    },
+    // 新增
+    handleAdd() {
+      addSendTenderNotice(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.formData = responseResult || {};
+          this.$message.success("保存成功");
+          this.handleGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    },
+    // 更新
+    handleUpdate() {
+      updateSendTenderNotice(this.formData).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.handleGetData();
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.isConnect = false;
+      });
+    }
+  }
+};
+</script>

@@ -1,0 +1,50 @@
+<template>
+  <div>
+    <span id="项目信息"> </span>
+    <Project @send-data="getData"></Project>
+    <span id="分包明细"> </span>
+    <SubContract :baseData="baseData"></SubContract>
+    <span id="产品明细"> </span>
+    <Product :baseData="baseData"></Product>
+    <AuditButton v-if="!BASE.ObjectIsNull(baseData)">
+      <a-button type="primary">
+        立项完成
+      </a-button>
+      <a-button type="primary">
+        提交审批
+      </a-button>
+    </AuditButton>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import Project from "./components/Project";
+import Product from "./components/Product";
+import SubContract from "./components/Product";
+import Anchor from "@/components/anchor/Anchor";
+import AuditButton from "@/components/button/AuditButton";
+
+export default {
+  components: { Project, Anchor, Product, AuditButton, SubContract },
+  data() {
+    return {
+      anchorList: ["项目信息", "分包明细", "分包明细"],
+      baseData: {}
+    };
+  },
+  watch: {
+    baseData: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  methods: {
+    getData(data) {
+      this.baseData = data;
+    }
+  }
+};
+</script>

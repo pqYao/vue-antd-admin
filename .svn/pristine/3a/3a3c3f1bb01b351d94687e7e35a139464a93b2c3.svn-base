@@ -1,0 +1,61 @@
+import { prepare } from "@/services/api";
+import { request, METHOD } from "@/utils/request";
+
+//报名
+//获取查询列
+export async function getSignUpList(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForPage`,
+    METHOD.GET,
+    data
+  );
+}
+//提交报名
+export async function submitSignUp(data) {
+  return request(
+    `${prepare}/esBSubTender/finishSubTender`,
+    METHOD.POST,
+    data
+  );
+}
+//保存联系人信息
+export async function saveContactInfo(data) {
+  return request(
+    `${prepare}/esBSubTender/finishSubTender`,
+    METHOD.POST,
+    data
+  );
+}
+//应答
+//获取查询列
+export async function getAnswerList(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForPage`,
+    METHOD.GET,
+    data
+  );
+}
+//获取采购文件的列表数据
+export async function getPurchaseFilesList(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForPage`,
+    METHOD.GET,
+    data
+  );
+}
+//获取投标保证金的列表数据
+export async function getBidBondList(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForPage`,
+    METHOD.GET,
+    data
+  );
+}
+//获取应答信息的列表数据
+export async function getAnswerInfoList(data) {
+  return request(
+    `${prepare}/esBSubTender/findSubTenderForPage`,
+    METHOD.GET,
+    data
+  );
+}

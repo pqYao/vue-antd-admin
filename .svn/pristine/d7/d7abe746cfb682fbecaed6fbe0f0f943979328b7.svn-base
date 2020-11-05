@@ -1,0 +1,52 @@
+<template>
+  <a-card>
+    <div class="notice-preview">
+      <h2 style="text-align:center">{{ formData.noticeTitle }}</h2>
+      <div v-html="formData.noticeContext"></div>
+      <div style="text-align:right" v-if="formData.entrustFlag == 0">
+        招标人：{{ formData.projectCreateUnitName }}
+      </div>
+      <div style="text-align:right" v-else>
+        招标人/招标代理机构：{{
+          formData.projectCreateUnitName + "/" + formData.agencyOrgName
+        }}
+      </div>
+      <div style="text-align:right">
+        {{
+          formData.operationFinishDate ||
+            moment(new Date()).format("YYYY年MM月DD日")
+        }}
+      </div>
+    </div>
+  </a-card>
+</template>
+<script>
+import moment from "moment";
+export default {
+  name: "notice-preview",
+  data() {
+    return {};
+  },
+  computed: {
+    formData() {
+      return JSON.parse(this.$route.query.formData);
+    }
+  },
+  methods: {
+    moment
+  }
+};
+</script>
+<style lang="less" scoped>
+.notice-preview {
+  padding: 20px 30px;
+  div {
+    padding: 0 20px;
+    font-size: 14px;
+    line-height: 30px;
+  }
+  .title {
+    padding: 0;
+  }
+}
+</style>

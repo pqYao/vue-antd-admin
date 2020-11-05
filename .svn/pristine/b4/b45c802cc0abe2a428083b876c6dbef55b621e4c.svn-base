@@ -1,0 +1,37 @@
+import { mapGetters } from "vuex";
+import { getProjectInfoData } from "@/services/bid";
+export const mixins = {
+	components: {
+	  ProjectInfo: () => import("@/components/descriptions/ProjectInfo"),
+	  PurchaseFiles: () => import("./components/PurchaseFiles"),
+	  BidBond: () => import("./components/BidBond"),
+	  AnswerInfo: () => import("./components/AnswerInfo"),
+	  Anchor: () => import("@/components/anchor/Anchor")
+	},
+	data() {
+		return {
+			projectData: {},
+			anchorList: ["项目信息", "采购文件", "投标保证金", "应答信息"]
+		}
+	},
+	computed: {
+	  ...mapGetters("account", ["dictionary"])
+	},
+	created() {
+	  this.fnGetProjectData();
+	},
+	methods: {
+		fnGetProjectData() {
+	    getProjectInfoData(this.$route.params.id).then(res => {
+				const resData = res.data;
+				if (resData.errCode == "0000") {
+					this.projectData = resData.responseResult || {};
+				} else {
+					this.$error({
+		        content: this.BASE.handleErrorMsg(resData)
+		      });
+				}
+	    });
+	  }
+	}
+}

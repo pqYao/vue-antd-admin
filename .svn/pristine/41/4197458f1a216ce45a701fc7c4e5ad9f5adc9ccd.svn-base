@@ -1,0 +1,137 @@
+<template>
+  <div>
+    <a-card>
+      <Heading name="查询结果"> </Heading>
+      <a-table
+        size="small"
+        :loading="pageData.loading"
+        :pagination="false"
+        :columns="columns"
+        :dataSource="dataSource"
+        :scroll="{ x: true }"
+        rowKey="noticeChangeId"
+      >
+        <template slot="action" slot-scope="record">
+          <a-space :size="8">
+            <a @click="handleClick(record)">查看公告明细</a>
+          </a-space>
+        </template>
+      </a-table>
+      <pagination
+        :value="pageData.page"
+        :pageSize="pageData.limit"
+        v-show="pageData.total > 0"
+        :total="pageData.total"
+        @change="sizeChange"
+        @showSizeChange="pageChange"
+      ></pagination>
+    </a-card>
+  </div>
+</template>
+
+<script>
+import Heading from "@/components/heading/Heading";
+import Pagination from "@/components/pagination/Pagination";
+import { findNoticeChangeRecordsForPage } from "@/services/bid";
+
+const pageData = {
+  limit: 15,
+  total: 0,
+  page: 1,
+  loading: false
+};
+
+const columns = [
+  {
+    title: "序号",
+    dataIndex: "number",
+    align: "center",
+    customRender: (text, record, index) =>
+      `${(pageData.page - 1) * pageData.limit + index + 1}`,
+    width: 60
+  },
+  {
+    title: "公告名称",
+    dataIndex: "noticeTitle"
+  },
+  {
+    title: "变更时间",
+    dataIndex: "operationFinishDate",
+    align: "center"
+  },
+  {
+    title: "变更人",
+    dataIndex: "createName",
+    align: "center"
+  },
+  {
+    title: "操作",
+    scopedSlots: { customRender: "action" },
+    align: "center"
+  }
+];
+
+export default {
+  name: "change-record",
+  components: { Heading, Pagination },
+  data() {
+    return {
+      columns,
+      dataSource: [],
+      pageData
+    };
+  },
+  created() {
+    this.pageData.limit = 15;
+    this.pageData.page = 1;
+    this.getData();
+  },
+  activated() {
+    this.getData();
+  },
+  methods: {
+    handleClick(record) {
+      // console.log(record);
+      this.$router.push({
+        path: `/notice-preview/${record.noticeChangeId}`,
+        query: {
+          formData: JSON.stringify(record)
+        }
+      });
+    },
+    getData() {
+      let param = Object.assign({
+        limit: this.pageData.limit,
+        page: this.pageData.page,
+        projectId: this.$route.query.projectId
+      });
+      this.pageData.loading = true;
+      findNoticeChangeRecordsForPage(param).then(res => {
+        const resData = res.data;
+        const responseResult = res.data.responseResult;
+        if (resData.errCode == "0000") {
+          const { data, total } = responseResult;
+          this.dataSource = data;
+          this.pageData.total = Number(total);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+        this.pageData.loading = false;
+      });
+    },
+    sizeChange(page, pageSize) {
+      this.pageData.page = page;
+      this.pageData.limit = pageSize;
+      this.getData();
+    },
+    pageChange(current, size) {
+      this.pageData.page = current;
+      this.pageData.limit = size;
+      this.getData();
+    }
+  }
+};
+</script>

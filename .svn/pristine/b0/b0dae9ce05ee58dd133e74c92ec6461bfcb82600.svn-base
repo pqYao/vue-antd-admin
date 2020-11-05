@@ -1,0 +1,329 @@
+<template>
+  <a-card>
+    <Heading :name="name">
+      <a-button type="primary" @click="handleSearch">查询</a-button>
+      <a-popover content="重置查询条件" v-model="visible" placement="bottom">
+        <a-button @click="handleReset">重置</a-button>
+      </a-popover>
+    </Heading>
+    <a-form
+      layout="horizontal"
+      class="es-form"
+      :form="form"
+      @keydown.native.enter.prevent="handleSearch"
+    >
+      <div :class="searchList.length > len ? 'fold' : null">
+        <div v-for="(item, i) in list" :key="i">
+          <a-row v-if="(i > 0 && advanced) || i == 0">
+            <a-col
+              v-for="(v, i) in item"
+              :key="i"
+              :md="len == 2 ? 12 : 8"
+              :sm="24"
+            >
+              <a-form-item
+                v-if="v.type == 'input'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-input
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请输入"
+                  allowClear
+                />
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'select'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-select
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请选择"
+                  allowClear
+                >
+                  <a-select-option
+                    v-for="(m, i) in dictionary[`${v.key}`]"
+                    :class="{ 'hide-select-item': !m }"
+                    :key="i"
+                    :value="`${i}`"
+                    >{{ m }}</a-select-option
+                  >
+                </a-select>
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'purchaseTypeAll'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-select
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请选择"
+                  allowClear
+                >
+                  <a-select-option
+                    v-for="(m, i) in dictionary.purchaseTypeAll"
+                    :class="{ 'hide-select-item': !m }"
+                    :key="i"
+                    :value="`${i}`"
+                    >{{ m }}</a-select-option
+                  >
+                </a-select>
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'otherPurchaseType'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-select
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请选择"
+                  allowClear
+                >
+                  <a-select-option
+                    v-for="(m, i) in dictionary.otherPurchaseType"
+                    :class="{ 'hide-select-item': !m }"
+                    :key="i"
+                    :value="`${i}`"
+                    >{{ m }}</a-select-option
+                  >
+                </a-select>
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'comparatePurchaseType'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-select
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请选择"
+                  allowClear
+                >
+                  <a-select-option
+                    v-for="(m, i) in dictionary.comparatePurchaseType"
+                    :class="{ 'hide-select-item': !m }"
+                    :key="i"
+                    :value="`${i}`"
+                    >{{ m }}</a-select-option
+                  >
+                </a-select>
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'flag'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-select
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请选择"
+                  allowClear
+                >
+                  <a-select-option value="1">是</a-select-option>
+                  <a-select-option value="0">否</a-select-option>
+                </a-select>
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'operationState'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-select
+                  v-decorator="[`${v.key}`]"
+                  placeholder="请选择"
+                  allowClear
+                >
+                  <a-select-option
+                    v-for="(m, i) in operationState"
+                    :class="{ 'hide-select-item': !m }"
+                    :key="i"
+                    :value="`${i}`"
+                    >{{ m }}</a-select-option
+                  >
+                </a-select>
+              </a-form-item>
+              <a-form-item
+                v-if="v.type == 'date'"
+                :label="v.label"
+                v-bind="BASE.searchItemLayout"
+              >
+                <a-range-picker
+                  v-decorator="[
+                    `${v.key}`,
+                    {
+                      initialValue: [getPreData(), getCurrentData()]
+                    }
+                  ]"
+                  style="width: 100%"
+                  @change="onDateChange($event, v.key)"
+                  allowClear
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+      </div>
+      <span
+        v-show="searchList.length > len"
+        style="float: right; margin-top: 10px;margin-right: 30px;"
+      >
+        <a @click="toggleAdvanced" style="font-size:18px">
+          <a-icon :type="advanced ? 'up-circle' : 'down-circle'" />
+        </a>
+      </span>
+    </a-form>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import moment from "moment";
+import Heading from "@/components/heading/Heading";
+import { operationStateMap } from "@/services/basic";
+
+export default {
+  props: {
+    // 一列查询条件个数  2||3
+    len: {
+      type: [Number],
+      default: 3
+    },
+    name: {
+      type: String,
+      required: true,
+      default: ""
+    },
+    searchList: {
+      type: Array,
+      required: true,
+      default: () => []
+    },
+    stateCode: {
+      type: String,
+      default: ""
+    }
+  },
+  components: { Heading },
+  data() {
+    return {
+      form: this.$form.createForm(this, { name: "advanced_search" }),
+      advanced: false,
+      list: [],
+      operationState: [],
+      dateObj: {
+        createDateStart: this.getPreData(),
+        createDateEnd: this.getCurrentData()
+      },
+      dateKey: "",
+      visible: false
+    };
+  },
+  watch: {
+    stateCode: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    },
+    len: {
+      handler(val) {
+        return val;
+      },
+      immediate: true,
+      deep: true
+    }
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+    if (this.stateCode) {
+      this.getOperationState();
+    }
+  },
+  mounted() {
+    for (var i = 0; i < this.searchList.length; i += this.len) {
+      this.list.push(this.searchList.slice(i, i + this.len));
+    }
+  },
+  methods: {
+    moment,
+    getOperationState() {
+      operationStateMap(this.stateCode).then(result => {
+        const resData = result.data;
+        if (resData.errCode === "0000") {
+          let arr = {};
+          for (var i in resData.responseResult) {
+            let key = i.split("_");
+            if (!arr[key[0]]) arr[key[0]] = [];
+            arr[key[0]][key[1]] = resData.responseResult[i];
+          }
+          for (const key in arr) {
+            this.operationState = arr[key];
+          }
+          console.log(this.operationState);
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    getCurrentData() {
+      return moment(new Date()).format("YYYY-MM-DD");
+    },
+    getPreData() {
+      return moment(new Date())
+        .subtract(1, "months")
+        .format("YYYY-MM-DD");
+    },
+    handleSearch(e) {
+      e.preventDefault();
+      this.form.validateFields((error, values) => {
+        let res = {};
+        let flag = false;
+        for (let i in values) {
+          if (i != "createDate") res[i] = this.BASE.handleInput(values[i]);
+        }
+        this.searchList.forEach(e => {
+          if (e.type === "date") {
+            flag = true;
+          }
+        });
+        if (flag) {
+          this.$emit("on-filter", Object.assign(res, this.dateObj));
+        } else {
+          this.$emit("on-filter", res);
+        }
+      });
+    },
+    handleReset() {
+      this.visible = false;
+      this.form.resetFields();
+      this.dateObj.createDateStart = "";
+      this.dateObj.createDateEnd = "";
+      this.dateObj[`${this.dateKey}Start`] = "";
+      this.dateObj[`${this.dateKey}End`] = "";
+    },
+    onDateChange(date, key) {
+      this.dateKey = key;
+      if (date.length == 0) {
+        this.dateObj[`${key}Start`] = "";
+        this.dateObj[`${key}End`] = "";
+      } else {
+        this.dateObj[`${key}Start`] = moment(date[0]._d).format("YYYY-MM-DD");
+        this.dateObj[`${key}End`] = moment(date[1]._d).format("YYYY-MM-DD");
+      }
+    },
+    toggleAdvanced() {
+      this.advanced = !this.advanced;
+    }
+  }
+};
+</script>
+<style lang="less" scoped>
+.fold {
+  width: calc(100% - 50px);
+  display: inline-block;
+}
+</style>

@@ -1,0 +1,51 @@
+<template>
+  <div class="footer">
+    <div class="links">
+      <a
+        :href="item.link ? item.link : 'javascript: void(0)'"
+        v-for="(item, index) in linkList"
+        :key="index"
+      >
+        {{ item.label }}
+        <a-icon v-if="item.icon" :type="item.icon" />{{ item.name }}
+        <a-divider v-show="index < 1" type="vertical" class="footer-divider" />
+      </a>
+    </div>
+    <div class="copyright">
+      Copyright<a-icon type="copyright" />{{copyright}}
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "PageFooter",
+  props: ["copyright", "linkList"]
+};
+</script>
+
+<style lang="less" scoped>
+.footer {
+  padding: 0 16px;
+  margin: 48px 0 24px;
+  text-align: center;
+  .copyright {
+    color: @text-color-second;
+    font-size: 14px;
+  }
+  .links {
+    margin-bottom: 8px;
+    // a:not(:last-child) {
+    // margin-right: 40px;
+    // }
+    .footer-divider {
+      background: rgba(0, 0, 0, 0.45);
+    }
+    a {
+      color: @text-color-second;
+      -webkit-transition: all 0.3s;
+      transition: all 0.3s;
+    }
+  }
+}
+</style>

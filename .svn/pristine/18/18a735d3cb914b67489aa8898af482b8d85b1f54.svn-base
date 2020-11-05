@@ -1,0 +1,146 @@
+<template>
+  <a-card>
+    <Heading name="招标公告">
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        选择公告模板
+      </a-button>
+      <a-button type="primary" @click="handlePreview">
+        <i :class="['iconfont', 'icon-yulancopy']"></i>
+        预览
+      </a-button>
+      <a-button type="primary" @click="handleSubmit" :disabled="isConnect">
+        <i :class="['iconfont', 'icon-baocun']"></i>
+        签字并保存
+      </a-button>
+    </Heading>
+
+    <a-form
+      layout="horizontal"
+      :form="form"
+      class="es-form es-form-bk"
+      @keydown.native.enter.prevent="handleSubmit"
+    >
+      <a-row>
+        <a-col :md="16" :sm="24">
+          <a-form-item label="标题" v-bind="BASE.twoItemLayout">
+            <a-input
+              v-decorator="[
+                `title`,
+                {
+                  maxLength: 50,
+                  initialValue: formData.title,
+                  validateTrigger: ['blur'],
+                  rules: [{ required: true, message: '请输入标题' }]
+                }
+              ]"
+              placeholder="请输入"
+              allowClear
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <a-row>
+        <a-col :md="24" :sm="24">
+          <a-form-item label="内容" v-bind="BASE.threeItemLayout">
+            <tinymce
+              v-if="tinymceRefresh"
+              v-model="formData.content"
+              :height="300"
+            />
+          </a-form-item>
+        </a-col>
+      </a-row>
+    </a-form>
+  </a-card>
+</template>
+<script>
+import { mapGetters } from "vuex";
+import Heading from "@/components/heading/Heading";
+import Tinymce from "@/components/Tinymce";
+
+export default {
+  name: "notice",
+  components: { Tinymce, Heading },
+  data() {
+    return {
+      form: this.$form.createForm(this),
+      formData: {},
+      isConnect: false,
+      tinymceRefresh: true
+    };
+  },
+  computed: {
+    ...mapGetters("account", ["dictionary"])
+  },
+  created() {
+    // this.handleInit();
+    this.tinymceRefresh = false;
+    this.$nextTick(() => {
+      this.tinymceRefresh = true;
+    });
+  },
+  methods: {
+    //  公告预览
+    handlePreview() {
+      this.$router.push({
+        path: `/bid/tender/notice-preview/${this.formData.entrustId}`,
+        query: {
+          title: this.formData.title,
+          content: this.formData.content,
+          tenderee: this.formData.tenderee
+        }
+      });
+    },
+    findProjectInfo() {
+      //   findProjectInfoById(this.projectId).then(res => {
+      //     const resData = res.data;
+      //     if (resData.errCode === "0000") {
+      //       const { responseResult } = resData;
+      //       this.formData = responseResult;
+      //       this.$emit("send-data", this.formData);
+      //     } else {
+      //       this.$error({
+      //         title: "错误提示",
+      //         content: this.BASE.handleErrorMsg(resData)
+      //       });
+      //     }
+      //   });
+    },
+    handleSubmit(e) {
+      e.preventDefault();
+      this.form.validateFieldsAndScroll(
+        this.BASE.formScrollOptions,
+        (error, values) => {
+          if (error) {
+            return;
+          }
+          for (let i in values) {
+            this.formData[i] = values[i];
+          }
+          this.isConnect = true;
+          this.updateInfo();
+        }
+      );
+    },
+
+    // 更新
+    updateInfo() {
+      //   updateProjectInfo(this.formData).then(res => {
+      //     const resData = res.data;
+      //     if (resData.errCode === "0000") {
+      //       const { responseResult } = resData;
+      //       this.projectId = responseResult.projectId;
+      //       this.$message.success("更新成功", 3);
+      //       this.findProjectInfo();
+      //     } else {
+      //       this.$error({
+      //         title: "错误提示",
+      //         content: this.BASE.handleErrorMsg(resData)
+      //       });
+      //     }
+      //     this.isConnect = false;
+      //   });
+    }
+  }
+};
+</script>

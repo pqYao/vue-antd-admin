@@ -1,0 +1,93 @@
+<template>
+  <div>
+    <span id="项目信息"> </span>
+    <Project></Project>
+    <span id="分包明细"> </span>
+    <SubContract
+      @emit-sc-length="handleSubcontractData"
+      @update-product-info="handleUpdateProductInfo"
+    ></SubContract>
+    <span id="产品明细"> </span>
+    <Product
+      ref="product"
+      :subcontractDataLength="subcontractDataLength"
+    ></Product>
+    <AuditButton>
+      <a-button type="primary">
+        项目回退
+      </a-button>
+      <a-popconfirm
+        :visible="isFinish"
+        title="是否分包完成?"
+        @confirm="fnConfirm()"
+      >
+        <a-button @click="subContractFinish()" type="primary">
+          分包完成
+        </a-button>
+      </a-popconfirm>
+      <!-- <a-button type="primary">
+        提交审批
+      </a-button> -->
+    </AuditButton>
+    <Anchor :anchorList="anchorList"> </Anchor>
+  </div>
+</template>
+<script>
+import Project from "./components/Project";
+import Product from "./components/Product";
+import SubContract from "./components/SubContract";
+import Anchor from "@/components/anchor/Anchor";
+import AuditButton from "@/components/button/AuditButton";
+import { finishSubContract } from "@/services/other";
+
+export default {
+  name: "sub-contract-edit",
+  components: { Project, Anchor, Product, AuditButton, SubContract },
+  data() {
+    return {
+      isFinish: false,
+      subcontractDataLength: 0,
+      anchorList: ["项目信息", "分包明细", "产品明细"]
+    };
+  },
+  methods: {
+    handleSubcontractData(data) {
+      this.subcontractDataLength = data || 0;
+    },
+    handleUpdateProductInfo() {
+      this.$refs.product.getData();
+    },
+    subContractFinish() {
+      let param = {
+        projectId: this.$route.params.id,
+        checkFlag: true
+      };
+      finishSubContract(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode == "0000") {
+          this.isFinish = true;
+        } else {
+          this.$error({
+            title: "错误提示",
+            content: this.BASE.handleErrorMsg(resData)
+          });
+        }
+      });
+    },
+    fnConfirm() {
+      let param = {
+        projectId: this.$route.params.id,
+        checkFlag: false
+      };
+      finishSubContract(param).then(res => {
+        const resData = res.data;
+        if (resData.errCode === "0000") {
+          const { responseResult } = resData;
+          this.$message.success(responseResult);
+          this.$closePage(this.$route.fullPath);
+        }
+      });
+    }
+  }
+};
+</script>
